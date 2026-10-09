@@ -70,6 +70,8 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .mode:active{transform:translateY(4px);border-bottom-width:4px;margin-top:4px}
 .mode .ic{font-size:clamp(34px,9vw,50px);line-height:1.1}
 .mode small{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.mode.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:12px;padding-block:12px 10px}
+.mode.wide .ic{font-size:clamp(28px,7vw,40px)}
 .book-btn{border:0;background:none;font-weight:900;font-size:19px;padding:8px 14px;border-radius:999px;color:var(--ink);display:flex;align-items:center;gap:6px}
 .book-btn b{display:inline-block;background:var(--sun);border-radius:999px;padding:2px 10px;font-family:var(--f-num)}
 
@@ -103,6 +105,15 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .choice.glow{animation:glow 1.1s ease-in-out infinite}
 .hear{border:0;background:var(--sky);color:#fff;font-weight:900;font-size:20px;padding:12px 22px;border-radius:999px;box-shadow:0 5px 0 #1F6EA3}
 .count-card{padding-top:20px}
+
+/* なぞりがき */
+.trace{display:block;width:100%;max-height:min(52vh,430px);touch-action:none}
+.trace polyline{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.trace .tg{stroke:var(--ground-2);stroke-width:15}
+.trace .tg.later{opacity:.45}
+.trace .ink{stroke:var(--c);stroke-width:11}
+.trace .arr{fill:var(--leaf);opacity:.7}
+.trace .dot{fill:var(--leaf);stroke:#fff;stroke-width:2.5;transform-box:fill-box;transform-origin:center;animation:pulse 1.2s ease-in-out infinite}
 
 /* balloons */
 .goal{display:flex;align-items:center;gap:14px;background:var(--paper);border-radius:999px;padding:6px 22px 6px 8px;box-shadow:0 5px 0 var(--shade)}
@@ -182,9 +193,10 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 @keyframes jump{30%{transform:translateY(-18px) scale(1.08)}60%{transform:translateY(0) scale(.97)}}
 @keyframes glow{50%{box-shadow:0 8px 0 var(--shade),0 0 0 10px var(--sun)}}
 @keyframes sway{50%{transform:rotate(6deg)}0%,100%{transform:rotate(-6deg)}}
+@keyframes pulse{50%{transform:scale(1.3)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){
-  .owl,.rays,.balloon,.capsule svg,.cheer img{animation:none}
+  .owl,.rays,.balloon,.capsule svg,.cheer img,.trace .dot{animation:none}
   .cell.tapped,.choice.right{animation:none}
 }
 @media (max-height:640px){
@@ -258,28 +270,32 @@ const SUBJ = {
   num: { id:'num', key:'suuji-mori-v1', max:10, name:'すうじ', unit:'数字', tab:'🔢 すうじ',
     label: range(0,10).map(String), yomi: YOMI, color: COLOR, mon: MON,
     v: n => YOMI[n],
+    glyph: n => GL_NUM[n],
     belly: n => `お腹の点は、${n}個だよ`,
     modes: [['learn','#2E8FD0','👀','みる・かぞえる','すうじと なかよし'],['find','#E5484D','🔍','すうじ さがし','どれ かな？'],
-      ['count','#3E9B6F','🍎','いくつ かな？','かぞえて えらぶ'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ すうじを パン！']],
+      ['count','#3E9B6F','🍎','いくつ かな？','かぞえて えらぶ'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ すうじを パン！'],['trace','#D99A00','✏️','なぞりがき','ゆびで かこう']],
     notes: ['はじめは 1〜3 だけ。出ている数字がすべて「なれ度2」以上になると、次の数字が1つずつ登場します。',
       '苦手な数字ほど多く出題します。慣れるにつれて 2択 → 3択 → 4択 と増えます。',
       'まちがえても減点はありません。選んだ数字の読み方を教え、2回まちがえると正解が光ります。',
       '数字の形を身近なもの（2は はくちょう）に例え、10のわく（5×2のマス）で量と数字を結びつけます。数字ごとの色も固定しています。',
       '5問クリアで、その回に正解した数字のモンスターが1ぴき仲間になります。名前は数字の読みではじまり、おなかの点の数がその数字です。',
-      'なれ度2で1回、なれ度3でもう1回進化します。進化は下がりません。'] },
+      'なれ度2で1回、なれ度3でもう1回進化します。進化は下がりません。',
+      '「なぞりがき」は学校で習う書き順（4 と 5 は2画）で、緑の丸から指でなぞります。手本の線の上をなぞった分だけ色がつきます。なれ度には数えませんが、5回で仲間がふえます。'] },
   abc: { id:'abc', key:'suuji-mori-abc-v1', max:26, name:'もじ', unit:'文字', tab:'🔤 ABC',
     label: [...LET], lower: [...LET.toLowerCase()], yomi: KANA,
     color: range(0,26).map(n => PAL[(n+9)%10]),
     mon: range(0,26).map(n => [KANA[n] + SUFFIX[n % SUFFIX.length], EARTYPES[n % EARTYPES.length]]),
     v: n => `«${LET[n]}|${KANA[n]}»`,
+    glyph: n => GL_ABC[LET[n]],
     belly: n => `お腹に、«${LET[n]}|${KANA[n]}»が書いてあるよ`,
     modes: [['learn','#2E8FD0','👀','みる・きく','ABCと なかよし'],['find','#E5484D','🔍','もじ さがし','どれ かな？'],
-      ['pair','#3E9B6F','🔡','こもじ ペア','A と a は なかよし'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ もじを パン！']],
+      ['pair','#3E9B6F','🔡','こもじ ペア','A と a は なかよし'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ もじを パン！'],['trace','#D99A00','✏️','なぞりがき','ゆびで かこう']],
     notes: ['はじめは A〜C だけ。出ている文字がすべて「なれ度2」以上になると、次の文字が1つずつ登場します（Zまで）。',
       '文字の読みは英語の声で読み上げます（英語の声が入っていない端末では「エー」「ビー」とカタカナ読み）。',
       '「みる・きく」では大文字と小文字をならべ、その文字が入った単語と絵（A は apple 🍎）をタップで聞けます。',
       '「こもじ ペア」は大文字に合う小文字をえらびます。色で答えがわからないよう、問題の文字は黒で出します。',
-      '苦手な文字ほど多く出題、2択→3択→4択、まちがえても減点なし、5問クリアで仲間がふえる、のは数字と同じです。モンスターのおなかにはその文字が書いてあります。'] },
+      '苦手な文字ほど多く出題、2択→3択→4択、まちがえても減点なし、5問クリアで仲間がふえる、のは数字と同じです。モンスターのおなかにはその文字が書いてあります。',
+      '「なぞりがき」は大文字を書き順どおりに、緑の丸から指でなぞります（小文字はまだありません）。なれ度には数えませんが、5回で仲間がふえます。'] },
 };
 let S = SUBJ.num;
 const V = n => S.v(n);
@@ -302,6 +318,8 @@ const SAY = {
   wrongPair: (n, t) => `それは${V(n)}。 ${V(t)}の小文字を、探そう`,
   wrongCount: n => `それは${YOMI[n]}。 一緒に数えてみよう`,
   balloon: n => `${V(n)}の風船を、3つ割ってね`,
+  trace: n => `${V(n)}を、なぞってみよう。 緑の丸から、スタート`,
+  traceNext: () => '次の線も、なぞってね',
   is: n => `それは${V(n)}`,
   monNew: n => `あっ！ ${S.mon[n][0]}が出てきた！ どんぐりカプセルを、投げよう`,
   monVisit: n => `${S.mon[n][0]}が、遊びに来たよ！ ${V(n)}の仲間だね`,
@@ -334,9 +352,9 @@ function allLines(){
   const add = t => chunks(t).forEach(c => c.ja && set.add(c.ja));
   for (const s of Object.values(SUBJ)){
     S = s;
-    [SAY.home(), SAY.count(''), SAY.book(0), SAY.tryIt()].forEach(add);
+    [SAY.home(), SAY.count(''), SAY.book(0), SAY.tryIt(), SAY.traceNext()].forEach(add);
     for (const n of range(1, s.max)){
-      ['learn','find','pair','balloon','is','monNew','monVisit','caught','glow','evolved','newOne','mon','book'].forEach(k => add(SAY[k](n)));
+      ['learn','find','pair','balloon','trace','is','monNew','monVisit','caught','glow','evolved','newOne','mon','book'].forEach(k => add(SAY[k](n)));
       add(SAY.wrongFind(n, n)); add(SAY.wrongPair(n, n));
       PRAISE.forEach(p => add(SAY.right(p[1], n)));
     }
@@ -346,6 +364,76 @@ function allLines(){
   return [...set].map(text => ({ id: clipId(text), text }));
 }
 // @lines-end
+
+/* ---------- なぞりがき の 字形（書き順つき） ----------
+   1画 = 1つの文字列。「M x y」始点、「L x y」直線、「Q cx cy x y」曲線、「A cx cy rx ry 開始角 終了角」だ円の弧。
+   100×100 の箱、y は下向き、角度は 0=右・90=下（数がふえると時計まわり）。数字の書き順は学校で習う形（4 と 5 は2画）。 */
+const GL_NUM = {
+  1: ['M50 12L50 88'],
+  2: ['A50 34 22 22 200 390L28 88L76 88'],
+  3: ['A48 31 20 19 220 450A48 69 23 19 270 500'],
+  4: ['M46 12L22 62L80 62', 'M62 30L62 88'],
+  5: ['M32 12L31 47A50 66 22 21 220 500', 'M32 12L72 12'],
+  6: ['M64 12Q30 34 28 66A50 66 22 22 180 -180'],
+  7: ['M26 14L74 14L44 88'],
+  8: ['A50 31 18 19 -30 -270A50 68 22 20 -90 270A50 31 18 19 90 -30'],
+  9: ['A50 34 20 20 0 -360L70 88'],
+  10: { w: 160, s: ['M45 12L45 88', 'A115 50 24 38 -90 -450'] },
+};
+const GL_ABC = {
+  A: ['M50 12L22 88', 'M50 12L78 88', 'M32 60L68 60'],
+  B: ['M28 12L28 88', 'M28 12L52 12A52 31 19 19 -90 90L28 50', 'M28 50L54 50A54 69 21 19 -90 90L28 88'],
+  C: ['A52 50 28 38 -40 -320'],
+  D: ['M28 12L28 88', 'M28 12L44 12A44 50 32 38 -90 90L28 88'],
+  E: ['M30 12L30 88', 'M30 12L72 12', 'M30 50L66 50', 'M30 88L72 88'],
+  F: ['M30 12L30 88', 'M30 12L72 12', 'M30 50L66 50'],
+  G: ['A52 50 28 38 -40 -360L58 50'],
+  H: ['M28 12L28 88', 'M72 12L72 88', 'M28 50L72 50'],
+  I: ['M50 12L50 88', 'M36 12L64 12', 'M36 88L64 88'],
+  J: ['M62 12L62 66A46 66 16 20 0 180'],
+  K: ['M30 12L30 88', 'M72 12L30 56', 'M44 46L74 88'],
+  L: ['M30 12L30 88L72 88'],
+  M: ['M22 12L22 88', 'M22 12L50 64L78 12L78 88'],
+  N: ['M28 12L28 88', 'M28 12L72 88L72 12'],
+  O: ['A50 50 28 38 -90 -450'],
+  P: ['M30 12L30 88', 'M30 12L50 12A50 32 22 20 -90 90L30 52'],
+  Q: ['A50 50 28 38 -90 -450', 'M54 66L78 92'],
+  R: ['M30 12L30 88', 'M30 12L50 12A50 32 22 20 -90 90L30 52', 'M46 52L74 88'],
+  S: ['A50 31 22 19 -30 -270A50 69 24 19 -90 150'],
+  T: ['M22 12L78 12', 'M50 12L50 88'],
+  U: ['M26 12L26 62A50 62 24 26 180 0L74 12'],
+  V: ['M22 12L50 88L78 12'],
+  W: ['M14 12L32 88L50 30L68 88L86 12'],
+  X: ['M26 12L74 88', 'M74 12L26 88'],
+  Y: ['M24 12L50 50', 'M76 12L50 50L50 88'],
+  Z: ['M26 12L74 12L26 88L74 88'],
+};
+// 1画を 3 ずつの 等間隔の点に（なぞりの判定と 色ぬりに使う）
+const STEP = 3;
+function strokePts(str){
+  const raw = [];
+  for (const t of str.match(/[MLQA][^MLQA]*/g)){
+    const k = t[0], a = t.slice(1).trim().split(/[\s,]+/).map(Number);
+    if (k === 'M' || k === 'L') raw.push([a[0], a[1]]);
+    else if (k === 'Q'){
+      const [x0, y0] = raw[raw.length-1];
+      for (let i=1;i<=20;i++){ const u = i/20, v = 1-u; raw.push([v*v*x0 + 2*v*u*a[0] + u*u*a[2], v*v*y0 + 2*v*u*a[1] + u*u*a[3]]); }
+    } else {
+      const [cx, cy, rx, ry, a0, a1] = a, m = Math.ceil(Math.abs(a1-a0)/5);
+      for (let i=0;i<=m;i++){ const r = (a0 + (a1-a0)*i/m) * Math.PI/180; raw.push([cx + rx*Math.cos(r), cy + ry*Math.sin(r)]); }
+    }
+  }
+  const out = [raw[0]]; let carry = 0;
+  for (let i=1;i<raw.length;i++){
+    const [x0, y0] = raw[i-1], [x1, y1] = raw[i], d = Math.hypot(x1-x0, y1-y0);
+    let s = STEP - carry;
+    while (s <= d){ out.push([x0 + (x1-x0)*s/d, y0 + (y1-y0)*s/d]); s += STEP; }
+    carry = d - (s - STEP);
+  }
+  const last = raw[raw.length-1], end = out[out.length-1];
+  if (Math.hypot(last[0]-end[0], last[1]-end[1]) > .5) out.push(last);
+  return out;
+}
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -567,7 +655,7 @@ const wait = ms => new Promise(r => later(r, ms));
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; clearInterval(spawnTimer); spawnTimer = null; }
 function setMode(m){
   clearTimers(); mode = m; token++;
-  const game = ['find','count','pair','balloon'].includes(m);
+  const game = ['find','count','pair','balloon','trace'].includes(m);
   if (game) lastGame = m;
   starsEl.hidden = !game; spacer.hidden = game; homeBtn.hidden = m === 'home';
   drawStars();
@@ -586,8 +674,8 @@ function home(){
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
     <div class="path-label">${S.name}の みち</div>
     <div class="path">${stones}</div>
-    <div class="modes">${S.modes.map(([go, c, ic, t, sm]) =>
-      `<button class="mode" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
+    <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
+      `<button class="mode${all.length % 2 && i === all.length-1 ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
   guide('なにして あそぶ？ 5もん クリアで なかまが ふえるよ', SAY.home());
 }
@@ -719,6 +807,79 @@ function popBalloon(b){
   }
 }
 
+/* ---------- なぞりがき ----------
+   いまの画の 緑の丸から なぞる。手本の線から はずれすぎなければ 進み、指をはなしても 進みは のこる。
+   なぞった分だけ 手本の線に色がつく（指の線そのものではないので ガタガタでも きれいに見える）。
+   ガイドつきで かならず できるので なれ度は 上げ下げせず、ごほうびの候補にだけ入れる。 */
+const TOL = 16, AHEAD = 8;
+let tr = null;
+const ptsAttr = p => p.map(([x,y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
+const dist = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
+function trace(){ setMode('trace'); newRound(); nextTrace(); }
+function nextTrace(){
+  const t = pickTarget(), g = S.glyph(t), w = g.w || 100;
+  q = {t, over:false};
+  tr = { strokes: (g.s || g).map(strokePts), si:0, idx:0, on:false };
+  const lines = cls => tr.strokes.map(p => `<polyline class="${cls}" points="${cls === 'tg' ? ptsAttr(p) : ''}"/>`).join('');
+  stage.innerHTML = `<div class="card count-card" style="--c:${S.color[t]}">
+    <svg class="trace" id="tsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${S.yomi[t]}">${lines('tg')}${lines('ink')}
+      <polygon class="arr" points="6,0 -4,5.5 -4,-5.5"/><circle class="dot" r="7.5"/></svg></div>`;
+  drawTrace();
+  guide(`「${S.yomi[t]}」を なぞろう。みどりの まるから スタート`, SAY.trace(t));
+}
+function drawTrace(){
+  const svg = $('#tsvg'); if (!svg) return;
+  const tg = svg.querySelectorAll('.tg'), ink = svg.querySelectorAll('.ink'), dot = svg.querySelector('.dot'), arr = svg.querySelector('.arr');
+  tr.strokes.forEach((p, i) => {
+    tg[i].classList.toggle('later', i > tr.si);
+    ink[i].setAttribute('points', ptsAttr(i < tr.si ? p : i === tr.si ? p.slice(0, tr.idx+1) : []));
+  });
+  const p = tr.strokes[tr.si];
+  dot.style.display = arr.style.display = p ? '' : 'none';
+  if (!p) return;
+  dot.setAttribute('cx', p[tr.idx][0]); dot.setAttribute('cy', p[tr.idx][1]);
+  // 向きの矢印：いまの所から すこし先に
+  const k = Math.min(tr.idx + 5, p.length - 2);
+  if (k <= tr.idx){ arr.style.display = 'none'; return; }
+  const ang = Math.atan2(p[k+1][1] - p[k-1][1], p[k+1][0] - p[k-1][0]) * 180 / Math.PI;
+  arr.setAttribute('transform', `translate(${p[k][0].toFixed(1)} ${p[k][1].toFixed(1)}) rotate(${ang.toFixed(0)})`);
+}
+const svgPt = (svg, e) => { const m = svg.getScreenCTM().inverse(), pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [pt.x, pt.y]; };
+function traceDown(svg, e){
+  e.preventDefault();
+  if (q.over) return;
+  if (dist(svgPt(svg, e), tr.strokes[tr.si][tr.idx]) <= TOL + 4){ tr.on = true; try { svg.setPointerCapture(e.pointerId); } catch(err) {} }
+  else svg.querySelector('.dot').animate([{opacity:1},{opacity:.2},{opacity:1},{opacity:.2},{opacity:1}], {duration:700});
+}
+function traceMove(e){
+  const svg = $('#tsvg'); if (!svg) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  for (const ev of evs.length ? evs : [e]){
+    if (!tr.on) break;
+    const pt = svgPt(svg, ev), p = tr.strokes[tr.si];
+    for (let j = Math.min(tr.idx + AHEAD, p.length - 1); j > tr.idx; j--){
+      if (dist(pt, p[j]) <= TOL){
+        if (Math.floor(j / 6) > Math.floor(tr.idx / 6)) tone(440 + j * 6, 0, .07, 'sine', .05);
+        tr.idx = j; break;
+      }
+    }
+    if (tr.idx >= p.length - 1) strokeDone();
+  }
+  drawTrace();
+}
+function strokeDone(){
+  tr.on = false; tr.si++; tr.idx = 0;
+  if (tr.si < tr.strokes.length){ tone(784, 0, .2, 'triangle', .12); return guide('つぎの せんも なぞってね', SAY.traceNext()); }
+  const n = q.t, svg = $('#tsvg');
+  q.over = true; drawTrace();
+  chime(); burst(svg, 24);
+  svg.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:500});
+  const [p, ps] = pick(PRAISE);
+  guide(`${p} ${S.label[n]}（${S.yomi[n]}）`, SAY.right(ps, n));
+  round.hits.push(n); round.done++; drawStars();
+  later(() => round.done >= ROUND ? reward() : nextTrace(), 1800);
+}
+
 /* ---------- ごほうび：なかまに する ---------- */
 let rw = null;
 function reward(){
@@ -809,7 +970,7 @@ function book(){
 }
 
 const GO = { home, learn: () => learn(), find: () => startQuiz('find'), count: () => startQuiz('count'),
-  pair: () => startQuiz('pair'), balloon, book, again: () => GO[lastGame]() };
+  pair: () => startQuiz('pair'), balloon, trace, book, again: () => GO[lastGame]() };
 
 stage.addEventListener('click', e => {
   const el = e.target.closest('button'); if (!el || el.disabled || el.classList.contains('balloon')) return;
@@ -839,7 +1000,12 @@ stage.addEventListener('click', e => {
   if (el.dataset.n){ const n = +el.dataset.n; say(V(n)); tone(note(n), 0, .3, 'triangle', .14); el.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:350}); }
   if (el.id === 'hear') say(lastSpoken);
 });
-stage.addEventListener('pointerdown', e => { const b = e.target.closest('.balloon'); if (b) { e.preventDefault(); popBalloon(b); } });
+stage.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.balloon'); if (b) { e.preventDefault(); popBalloon(b); }
+  const t = mode === 'trace' && e.target.closest('#tsvg'); if (t) traceDown(t, e);
+});
+stage.addEventListener('pointermove', e => { if (mode === 'trace' && tr && tr.on) traceMove(e); });
+['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, () => { if (tr) tr.on = false; }));
 homeBtn.addEventListener('click', home);
 $('#owl').addEventListener('click', () => say(lastSpoken));
 
