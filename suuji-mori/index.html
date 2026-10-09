@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>すうじのもり</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +21,7 @@
   --f-ja:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
   --r:28px;
 }
+[hidden]{display:none !important}
 html,body{height:100%}
 body{
   background:var(--ground);color:var(--ink);font-family:var(--f-ja);
@@ -178,6 +180,7 @@ button.tenrow{background:#DDF0E4}
 .opts{display:flex;flex-direction:column;gap:8px}
 .opts label{display:flex;align-items:center;gap:10px;font-weight:700}
 .opts input{width:22px;height:22px;accent-color:var(--leaf)}
+.opts select{flex:1;min-width:0;font:inherit;font-weight:500;padding:6px 8px;border-radius:10px;border:2px solid var(--ground-2);background:#fff;color:var(--ink)}
 .pics{display:flex;flex-direction:column;gap:8px}
 .pic{display:flex;align-items:center;gap:10px}
 .pic img{width:48px;height:48px;border-radius:12px;object-fit:cover;flex:none}
@@ -230,17 +233,20 @@ button.tenrow{background:#DDF0E4}
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" id="sheetIn"></div>
 </div>
 
+<script src="voice/clips.js"></script>
 <script>
 (() => {
 const OPTKEY = 'suuji-mori-opt', PICKEY = 'suuji-mori-pics';
 const ROUND = 5, MAXPICS = 12;
+// @lines-begin  ここから @lines-end までは DOM を使わない（make-voice.py がここだけ取り出して 読み上げ文を ぜんぶ数える）
 const YOMI = ['ぜろ','いち','に','さん','よん','ご','ろく','なな','はち','きゅう','じゅう'];
 // 11からは「じゅう」＋一の位（にじゅう、にじゅういち…）
 const numYomi = v => v <= 10 ? YOMI[v] : (v >= 20 ? YOMI[Math.floor(v/10)] : '') + 'じゅう' + (v % 10 ? YOMI[v % 10] : '');
 const TSU = ['','ひとつ','ふたつ','みっつ'];
 // 形を身近なものに例える覚え方
-const HINT = {1:['✏️','えんぴつ'],2:['🦢','はくちょう'],3:['👂','おみみ'],4:['⛵','ヨット'],5:['🔑','かぎ'],
-  6:['🍒','さくらんぼ'],7:['🪃','ブーメラン'],8:['⛄','ゆきだるま'],9:['🎈','ふうせん'],10:['✏️🥚','えんぴつと たまご']};
+// 3番目は読み上げ用（漢字まじりのほうが アクセントが自然になる）
+const HINT = {1:['✏️','えんぴつ','鉛筆'],2:['🦢','はくちょう','白鳥'],3:['👂','おみみ','お耳'],4:['⛵','ヨット','ヨット'],5:['🔑','かぎ','鍵'],
+  6:['🍒','さくらんぼ','さくらんぼ'],7:['🪃','ブーメラン','ブーメラン'],8:['⛄','ゆきだるま','雪だるま'],9:['🎈','ふうせん','風船'],10:['✏️🥚','えんぴつと たまご','鉛筆と卵']};
 // 数字ごとに色を固定して、色でも思い出せるようにする
 const COLOR = {1:'#E5484D',2:'#F07C2A',3:'#D99A00',4:'#3E9B6F',5:'#2E8FD0',6:'#7A5AE0',7:'#D9468F',8:'#14998F',9:'#C7662B',10:'#B83A4B'};
 // なかまモンスター：なまえは数字の読みではじまり、おなかの点の数がその数字
@@ -259,16 +265,12 @@ const EARTYPES = ['horn','bunny','cat','round','antenna','leaf','fin','horn2'];
 const PAL = Object.values(COLOR);
 const ITEMS = ['🍎','🍓','🐟','🐥','🚗','⭐','🍩','🐞','🌸','🐸'];
 const BALLOON = ['#E5484D','#2E8FD0','#7A5AE0','#14998F','#D9468F','#E06A1B'];
-const PRAISE = ['やったね！','すごい！','せいかい！','ばっちり！','かんぺき！'];
+// [表示, 読み上げ]
+const PRAISE = [['やったね！','やったね！'],['すごい！','すごい！'],['せいかい！','正解！'],['ばっちり！','ばっちり！'],['かんぺき！','完璧！']];
 const CONF = ['#E5484D','#FFC93C','#2E8FD0','#3E9B6F','#D9468F','#7A5AE0'];
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const $ = s => document.querySelector(s);
-const stage = $('#stage'), bubble = $('#bubble'), starsEl = $('#stars'), homeBtn = $('#homeBtn'), spacer = $('#spacer');
 const range = (a,b) => Array.from({length:b-a+1},(_,i)=>a+i);
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- まなぶ もの（すうじ / 11〜30 / ABC） ----------
    どれも 1〜max の番号で動かし、見た目・読み・モンスターだけを入れかえる（11〜30 は 番号+10 が その数）。
@@ -277,7 +279,7 @@ const SUBJ = {
   num: { id:'num', key:'suuji-mori-v1', max:10, name:'すうじ', unit:'数字', tab:'🔢 1〜10',
     label: range(0,10).map(String), yomi: YOMI, color: COLOR, mon: MON, val: n => n,
     v: n => YOMI[n],
-    belly: n => `おなかの てんは、${YOMI[n]}こ だよ`,
+    belly: n => `お腹の点は、${n}個だよ`,
     modes: [['learn','#2E8FD0','👀','みる・かぞえる','すうじと なかよし'],['find','#E5484D','🔍','すうじ さがし','どれ かな？'],
       ['count','#3E9B6F','🍎','いくつ かな？','かぞえて えらぶ'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ すうじを パン！']],
     notes: ['はじめは 1〜3 だけ。出ている数字がすべて「なれ度2」以上になると、次の数字が1つずつ登場します。',
@@ -293,7 +295,7 @@ const SUBJ = {
     color: range(0,20).map(n => COLOR[n % 10 || 10]),
     mon: range(0,20).map(n => [numYomi(n+10) + SUFFIX[n % SUFFIX.length], EARTYPES[(n+3) % EARTYPES.length]]),
     v: n => numYomi(n+10),
-    belly: n => `おなかに、${numYomi(n+10)} が かいてあるよ`,
+    belly: n => `お腹に、${numYomi(n+10)}が書いてあるよ`,
     // まぎらわしい数（となり、10ちがい、12↔21 の入れかえ）を選択肢に優先して入れる
     near: n => { const v = n+10, s = String(v); return [v-1, v+1, v-10, v+10, +(s[1]+s[0])].map(x => x-10); },
     modes: [['learn','#2E8FD0','👀','みる・かぞえる','10の たばで かぞえる'],['find','#E5484D','🔍','すうじ さがし','どれ かな？'],
@@ -310,7 +312,7 @@ const SUBJ = {
     color: range(0,26).map(n => PAL[(n+9)%10]),
     mon: range(0,26).map(n => [KANA[n] + SUFFIX[n % SUFFIX.length], EARTYPES[n % EARTYPES.length]]),
     v: n => `«${LET[n]}|${KANA[n]}»`,
-    belly: n => `おなかに、«${LET[n]}|${KANA[n]}» が かいてあるよ`,
+    belly: n => `お腹に、«${LET[n]}|${KANA[n]}»が書いてあるよ`,
     modes: [['learn','#2E8FD0','👀','みる・きく','ABCと なかよし'],['find','#E5484D','🔍','もじ さがし','どれ かな？'],
       ['pair','#3E9B6F','🔡','こもじ ペア','A と a は なかよし'],['balloon','#7A5AE0','🎈','ふうせん わり','おなじ もじを パン！']],
     notes: ['はじめは A〜C だけ。出ている文字がすべて「なれ度2」以上になると、次の文字が1つずつ登場します（Zまで）。',
@@ -321,6 +323,80 @@ const SUBJ = {
 };
 let S = SUBJ.num;
 const V = n => S.v(n);
+
+/* ---------- よみあげる ことば ----------
+   ふきだしは ひらがな、読み上げは 漢字まじり・空白なし（アクセントが自然になる）。
+   日本語は 1文ずつ VOICEVOX で作った音声（voice/*.m4a）を鳴らし、ないものは ブラウザの声で読む。
+   ここに文を足したら allLines() にも足して、make-voice.py で音声を作りなおす。 */
+const SAY = {
+  home: () => '何して遊ぶ？ 5問クリアで、仲間が増えるよ',
+  learn: n => S.id === 'abc' ? `${V(n)}。 «${WORD[n][1]}|${WORD[n][2]}»の、${V(n)}`
+    : S.id === 'big' ? (v => `${V(n)}。 ${v % 10 ? `${numYomi(v - v % 10)}と${YOMI[v % 10]}で` : `十が${TSU[v/10]}で`}、${V(n)}。 10の束から、数えてみよう`)(S.val(n))
+    : `${YOMI[n]}。 ${HINT[n][2]}の、${YOMI[n]}。 ひとつずつ触って、数えてみよう`,
+  // num・total・wrongCount は 番号ではなく 数そのもの（0〜30）
+  num: v => numYomi(v),
+  total: v => `全部で、${numYomi(v)}！`,
+  find: n => `${V(n)}は、どれかな？`,
+  pair: n => `大文字の${V(n)}。 小文字は、どれかな？`,
+  count: nm => nm ? `${nm}は、いくついるかな？ 触って数えてもいいよ` : 'いくつあるかな？ 触って数えてもいいよ',
+  right: (p, n) => `${p} ${V(n)}！`,
+  wrongFind: (n, t) => `それは${V(n)}。 ${V(t)}は、どれかな？`,
+  wrongPair: (n, t) => `それは${V(n)}。 ${V(t)}の小文字を、探そう`,
+  wrongCount: v => `それは${numYomi(v)}。 一緒に数えてみよう`,
+  next: n => `${numYomi(S.val(n)-2)}、${numYomi(S.val(n)-1)}、次は何かな？`,
+  wrongNext: (n, t) => `それは${V(n)}。 ${numYomi(S.val(t)-1)}の次は、何かな？`,
+  balloon: n => `${V(n)}の風船を、3つ割ってね`,
+  is: n => `それは${V(n)}`,
+  monNew: n => `あっ！ ${S.mon[n][0]}が出てきた！ どんぐりカプセルを、投げよう`,
+  monVisit: n => `${S.mon[n][0]}が、遊びに来たよ！ ${V(n)}の仲間だね`,
+  caught: n => `やったー！ ${S.mon[n][0]}が、仲間になった！ ${S.belly(n)}`,
+  glow: n => `あれ？ ${S.mon[n][0]}が、光ってる！`,
+  evolved: n => `${S.mon[n][0]}が、進化した！ ${V(n)}が、得意になったね`,
+  newOne: n => `新しい${S.id === 'abc' ? '文字' : '数字'}、${V(n)}が出てきたよ`,
+  book: c => c ? `仲間が${c}匹いるよ。 触ってみてね` : '遊ぶと仲間が増えるよ',
+  mon: n => `${S.mon[n][0]}。 ${V(n)}の仲間だよ`,
+  word: n => `«${WORD[n][1]}|${WORD[n][2]}»`,
+  tryIt: () => S.id === 'abc' ? 'こんにちは。 «A|エー»。 «apple|アップル»の«A|エー»' : 'こんにちは。 いち、に、さん。 よくできたね！',
+};
+// 読み上げ文を かたまりに わける：{ja:'日本語の1文'} か {en:'英語', kana:'カタカナ'}（«英語|カタカナ»）
+function chunks(t){
+  const out = [];
+  String(t).split(/«([^»]*)»/).forEach((seg, i) => {
+    if (i % 2){ const [en, kana] = seg.split('|'); out.push({ en, kana: kana || en }); return; }
+    // 日本語どうしの間の空白は へんな間になるので つめてから、。！？ で1文ずつに
+    (seg.replace(/([^\x00-\x7F])\s+(?=[^\x00-\x7F])/g, '$1').match(/[^。！？]+[。！？]*/g) || []).forEach(j => {
+      j = j.trim(); if (/[^\s、。！？]/.test(j)) out.push({ ja: j });
+    });
+  });
+  return out;
+}
+// 音声ファイルの名前（1文の FNV-1a ハッシュ）
+const clipId = t => { let h = 0x811c9dc5; for (const ch of t){ h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); };
+// 音声を作る 日本語の1文を ぜんぶ（おうちの画像の名前など あとから決まるものは ブラウザの声）
+function allLines(){
+  const set = new Set(), keep = S;
+  const add = t => chunks(t).forEach(c => c.ja && set.add(c.ja));
+  for (const s of Object.values(SUBJ)){
+    S = s;
+    [SAY.home(), SAY.count(''), SAY.book(0), SAY.tryIt()].forEach(add);
+    for (const n of range(1, s.max)){
+      ['learn','find','pair','balloon','is','monNew','monVisit','caught','glow','evolved','newOne','mon','book'].forEach(k => add(SAY[k](n)));
+      add(SAY.wrongFind(n, n)); add(SAY.wrongPair(n, n));
+      PRAISE.forEach(p => add(SAY.right(p[1], n)));
+      if (s.id === 'big') [SAY.next(n), SAY.wrongNext(n, n)].forEach(add);
+    }
+  }
+  for (const v of range(1, 30)) [SAY.num(v), SAY.total(v), SAY.wrongCount(v)].forEach(add);
+  S = keep;
+  return [...set].map(text => ({ id: clipId(text), text }));
+}
+// @lines-end
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), bubble = $('#bubble'), starsEl = $('#stars'), homeBtn = $('#homeBtn'), spacer = $('#spacer');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- 保存 ---------- */
 // 声の設定とえらんだ教科は共通。なれ度・なかまは教科ごとに別々に保存
@@ -348,29 +424,76 @@ const savePics = () => { try { localStorage.setItem(PICKEY, JSON.stringify(pics)
 
 /* ---------- こえ と おと ---------- */
 let jaVoice = null, enVoice = null, lastSpoken = '';
+// 端末に入っている声のうち、なるべく自然な声をえらぶ（Edge の Natural、Apple の 拡張/プレミアム など）
+const NATURAL = /Natural|Neural|Online|Premium|Enhanced|プレミアム|拡張|高品質/i;
+const isNat = v => !!v && NATURAL.test(v.name);
+const voices = re => ('speechSynthesis' in window ? speechSynthesis.getVoices() : []).filter(v => re.test(v.lang));
+function bestVoice(vs, fav){
+  const rank = v => (isNat(v) ? 4 : 0) + (fav.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  return vs.slice().sort((a,b) => rank(b) - rank(a))[0] || null;
+}
 function pickVoice(){
   if (!('speechSynthesis' in window)) return;
-  const vs = speechSynthesis.getVoices();
-  jaVoice = vs.find(v => /^ja/i.test(v.lang) && /Kyoko|O-ren|Google|Nanami/i.test(v.name)) || vs.find(v => /^ja/i.test(v.lang)) || null;
-  enVoice = vs.find(v => /^en[-_]US/i.test(v.lang) && /Samantha|Google|Aria|Jenny/i.test(v.name)) || vs.find(v => /^en[-_]US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+  const ja = voices(/^ja/i), en = voices(/^en/i), us = en.filter(v => /^en[-_]US/i.test(v.lang));
+  jaVoice = ja.find(v => v.name === opt.jaName) || bestVoice(ja, /Nanami|Kyoko|O-ren|Google/i);
+  enVoice = en.find(v => v.name === opt.enName) || bestVoice(us.length ? us : en, /Ava|Jenny|Aria|Samantha|Google/i);
 }
 if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+// VOICEVOX で作った音声：voice/clips.js が window.VOICE = { credit, ids:[...] } を入れる（なければ ぜんぶ ブラウザの声）
+const VOICE = window.VOICE || { ids: [] };
+const CLIPS = new Set(VOICE.ids);
+const useClips = () => opt.clips !== false && CLIPS.size > 0;
+const clipUrl = c => `voice/${clipId(c.ja)}.m4a`;
+const player = new Audio();
+// iPhone は さいしょの タップの中で いちど鳴らした audio でないと あとから鳴らせないので、無音を鳴らしておく
+const SILENT = 'data:audio/wav;base64,UklGRgQCAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YeABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+document.addEventListener('pointerdown', () => { if (player.paused) { player.src = SILENT; player.play().catch(() => {}); } }, { capture: true, once: true });
+let sayGen = 0;
+const speaking = new Set();  // 再生中の utterance を持っておく（Chrome で GC されて途中で切れるのを防ぐ）
+function stopVoice(){
+  sayGen++;
+  player.onended = player.onerror = null; player.pause();
+  if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch(e) {}
+}
+// かたまりを じゅんばんに：日本語は 音声ファイル → なければ ブラウザの声、英語は ブラウザの英語の声
 function say(t){
   lastSpoken = t;
-  if (!opt.voice || !('speechSynthesis' in window)) return;
+  if (!opt.voice) return;
+  stopVoice();
+  const gen = sayGen, alive = () => gen === sayGen, steps = chunks(t);
+  const clip = c => c.ja && useClips() && CLIPS.has(clipId(c.ja));
+  // つぎの音声を先に読みこんでおくと つなぎめの間が短くなる
+  if (/^https?:/.test(location.protocol)) steps.filter(clip).forEach(c => fetch(clipUrl(c)).catch(() => {}));
+  const run = i => {
+    if (!alive() || i >= steps.length) return;
+    const c = steps[i], next = () => run(i + 1);
+    clip(c) ? playClip(c, next, alive) : speak(c, next, alive);
+  };
+  // cancel 直後に speak すると Safari で先頭が落ちるので ひと呼吸おく
+  setTimeout(() => run(0), 0);
+}
+function playClip(c, done, alive){
+  let fin = false;
+  const end = ok => { if (fin || !alive()) return; fin = true; player.onended = player.onerror = null; ok ? done() : speak(c, done, alive); };
+  player.onended = () => end(true); player.onerror = () => end(false);
+  player.src = clipUrl(c);
+  const p = player.play(); if (p) p.catch(() => end(false));
+}
+function speak(c, done, alive){
+  if (!('speechSynthesis' in window)) return done();
+  const en = !c.ja && (!!enVoice || !jaVoice);
+  let text = c.ja || (en ? c.en : c.kana);
+  // 1文字だけの英字は「A.」にして文字の名前として読ませる（A が冠詞 "uh" にならないように）
+  if (en && /^[A-Za-z]$/.test(text)) text = text.toUpperCase() + '.';
   try {
-    speechSynthesis.cancel();
-    // «英語|カタカナ» を区切りにして、日本語と英語を じゅんばんに よむ
-    String(t).split(/«([^»]*)»/).forEach((seg, i) => {
-      let text = seg, en = false;
-      if (i % 2){ const [e, k] = seg.split('|'); en = !!enVoice || !jaVoice; text = en ? e : (k || e); }
-      if (!/[^\s、。！？]/.test(text)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      if (en){ u.lang = 'en-US'; if (enVoice) u.voice = enVoice; u.rate = .8; u.pitch = 1.1; }
-      else { u.lang = 'ja-JP'; if (jaVoice) u.voice = jaVoice; u.rate = .85; u.pitch = 1.2; }
-      speechSynthesis.speak(u);
-    });
-  } catch(e) {}
+    const u = new SpeechSynthesisUtterance(text);
+    // はやさは ふつう（英語だけ ほんの少しゆっくり）。自然な声は 高さを いじると かえって不自然になるので そのまま
+    if (en){ u.lang = 'en-US'; if (enVoice) u.voice = enVoice; u.rate = .95; u.pitch = isNat(enVoice) ? 1 : 1.05; }
+    else { u.lang = 'ja-JP'; if (jaVoice) u.voice = jaVoice; u.rate = 1; u.pitch = isNat(jaVoice) ? 1 : 1.1; }
+    speaking.add(u);
+    u.onend = u.onerror = () => { speaking.delete(u); if (alive()) done(); };
+    speechSynthesis.speak(u);
+  } catch(e) { done(); }
 }
 let ac;
 function tone(f, at=0, dur=.22, type='sine', vol=.16){
@@ -513,7 +636,7 @@ function home(){
     <div class="modes">${S.modes.map(([go, c, ic, t, sm]) =>
       `<button class="mode" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
-  guide('なにして あそぶ？ 5もん クリアで なかまが ふえるよ', 'なにして あそぶ？ ごもん クリアで、なかまが ふえるよ');
+  guide('なにして あそぶ？ 5もん クリアで なかまが ふえるよ', SAY.home());
 }
 
 function learn(n){ setMode('learn'); cur = n || pendingNew || pool().length; pendingNew = null; renderLearn(); }
@@ -538,13 +661,9 @@ function renderLearn(){
       <button class="arrow" data-step="-1" ${n<=1?'disabled':''} aria-label="まえの ${S.name}">◀</button>
       <button class="arrow" data-step="1" ${n>=S.max?'disabled':''} aria-label="つぎの ${S.name}">▶</button>
     </div>`;
-  if (S.id === 'abc') guide(`「${KANA[n]}」だよ。${WORD[n][0]} ${WORD[n][1]} の ${S.lower[n]}`, `${V(n)}。 «${WORD[n][1]}|${WORD[n][2]}» の、${V(n)}`);
-  else if (S.id === 'big'){
-    const v = S.val(n), ones = v % 10;
-    guide(`「${S.yomi[n]}」だよ。10の たばから かぞえよう`,
-      `${V(n)}。 ${ones ? `${numYomi(v - ones)} と ${YOMI[ones]} で` : `じゅうが ${TSU[v/10]} で`}、${V(n)}。 10の たばから、かぞえてみよう`);
-  }
-  else guide(`「${YOMI[n]}」だよ。ひとつずつ さわって かぞえよう`, `${YOMI[n]}。 ${HINT[n][1]}の、${YOMI[n]}。 ひとつずつ さわって、かぞえてみよう`);
+  if (S.id === 'abc') guide(`「${KANA[n]}」だよ。${WORD[n][0]} ${WORD[n][1]} の ${S.lower[n]}`, SAY.learn(n));
+  else if (S.id === 'big') guide(`「${S.yomi[n]}」だよ。10の たばから かぞえよう`, SAY.learn(n));
+  else guide(`「${YOMI[n]}」だよ。ひとつずつ さわって かぞえよう`, SAY.learn(n));
 }
 // 10のわく：5こまでは1だん、6こからは2だん
 const face = it => typeof it === 'string' ? it : `<img src="${it.src}" alt="" draggable="false">`;
@@ -567,13 +686,13 @@ function bars(v, it){
 const qty = (n, it) => S.id === 'big' ? bars(S.val(n), it) : frame(n, it);
 const tenHint = v => v % 10 ? `<b>${v - v % 10}</b> と <b>${v % 10}</b>` : `<b>10</b> が ${v/10}つ`;
 function countTap(el){
-  if (el.classList.contains('tapped')) { say(numYomi(+el.dataset.c)); return; }
+  if (el.classList.contains('tapped')) { say(SAY.num(+el.dataset.c)); return; }
   counted += el.classList.contains('tenrow') ? 10 : 1; el.dataset.c = counted;
   el.classList.add('tapped'); el.insertAdjacentHTML('beforeend', `<span class="tag">${counted}</span>`);
   tone(note(counted), 0, .25, 'triangle', .13);
-  say(numYomi(counted));
+  say(SAY.num(counted));
   if (mode === 'learn' && counted === S.val(cur)){
-    later(() => { chime(); burst($('.bignum'), 24); guide(`ぜんぶで ${S.label[cur]}！`, `ぜんぶで、${V(cur)}！`); }, 650);
+    later(() => { chime(); burst($('.bignum'), 24); guide(`ぜんぶで ${S.label[cur]}！`, SAY.total(counted)); }, 650);
   }
 }
 
@@ -584,21 +703,21 @@ function nextQ(){
   const btns = makeChoices(t).map(n => `<button class="choice" data-ans="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${lab[n]}</button>`).join('');
   if (mode === 'find'){
     stage.innerHTML = `<button class="hear" id="hear">🔊 もういちど きく</button><div class="choices">${btns}</div>`;
-    guide(`「${S.yomi[t]}」は どれ かな？`, `${V(t)} は、どれ かな？`);
+    guide(`「${S.yomi[t]}」は どれ かな？`, SAY.find(t));
   } else if (mode === 'pair'){
     // 問題の文字は黒にして、色で こたえが わからないようにする
     stage.innerHTML = `<div class="card count-card" style="--c:var(--ink)"><button class="bignum" data-n="${t}" aria-label="${S.yomi[t]}">${S.label[t]}</button></div><div class="choices">${btns}</div>`;
-    guide(`「${S.label[t]}」の こもじは どれ かな？`, `おおもじの ${V(t)}。 こもじは、どれ かな？`);
+    guide(`「${S.label[t]}」の こもじは どれ かな？`, SAY.pair(t));
   } else if (mode === 'next'){
     // まえの 2つを みて、つぎの数を えらぶ（11 のときは 9、10 から）
     const v = S.val(t), seq = [v-2, v-1].map(x => `<button class="bignum" data-v="${x}" aria-label="${numYomi(x)}">${x}</button>`);
     stage.innerHTML = `<div class="card count-card seq">${seq.join('<span class="comma">,</span>')}<span class="comma">,</span><span class="q">?</span></div><div class="choices">${btns}</div>`;
-    guide(`${v-2}、${v-1}、 つぎは なに？`, `${numYomi(v-2)}、 ${numYomi(v-1)}、 つぎは なに かな？`);
+    guide(`${v-2}、${v-1}、 つぎは なに？`, SAY.next(t));
   } else {
     counted = 0;
     const it = pickItem(), nm = typeof it === 'string' ? '' : it.name;
     stage.innerHTML = `<div class="card count-card">${qty(t, it)}</div><div class="choices">${btns}</div>`;
-    guide(nm ? `${nm}は いくつ いるかな？` : 'いくつ あるかな？', nm ? `${nm}は、いくつ いるかな？ さわって かぞえても いいよ` : 'いくつ あるかな？ さわって かぞえても いいよ');
+    guide(nm ? `${nm}は いくつ いるかな？` : 'いくつ あるかな？', SAY.count(nm));
   }
 }
 function answer(n, el){
@@ -606,9 +725,9 @@ function answer(n, el){
   if (n === q.t){
     q.over = true;
     el.classList.add('right'); chime(); burst(el);
-    const p = pick(PRAISE);
-    if (mode === 'pair') guide(`${p} ${S.label[n]} と ${S.lower[n]}`, `${p} ${V(n)}！`);
-    else guide(`${p} ${S.label[n]}（${S.yomi[n]}）`, `${p} ${V(n)}！`);
+    const [p, ps] = pick(PRAISE);
+    if (mode === 'pair') guide(`${p} ${S.label[n]} と ${S.lower[n]}`, SAY.right(ps, n));
+    else guide(`${p} ${S.label[n]}（${S.yomi[n]}）`, SAY.right(ps, n));
     record(q.t, q.miss === 0);
     round.done++; drawStars();
     stage.querySelectorAll('.choice').forEach(b => b.disabled = true);
@@ -617,10 +736,10 @@ function answer(n, el){
     // まちがいは やさしく：その数字の なまえを おしえて、もう一度
     q.miss++; boop();
     el.classList.add('wrong'); el.disabled = true;
-    if (mode === 'find') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${V(q.t)} は、どれかな？`);
-    else if (mode === 'pair') guide(`おしい！ それは ${S.lower[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${V(q.t)} の こもじを、さがそう`);
-    else if (mode === 'next') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${numYomi(S.val(q.t)-1)} の つぎは、なにかな？`);
-    else guide(`おしい！ もういちど かぞえよう`, `それは ${V(n)}。 いっしょに かぞえてみよう`);
+    if (mode === 'find') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, SAY.wrongFind(n, q.t));
+    else if (mode === 'pair') guide(`おしい！ それは ${S.lower[n]}（${S.yomi[n]}）`, SAY.wrongPair(n, q.t));
+    else if (mode === 'next') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, SAY.wrongNext(n, q.t));
+    else guide(`おしい！ もういちど かぞえよう`, SAY.wrongCount(S.val(n)));
     if (q.miss >= 2) stage.querySelector(`[data-ans="${q.t}"]`).classList.add('glow');
   }
 }
@@ -630,7 +749,7 @@ function nextBalloon(){
   clearTimers();
   const t = pickTarget(); q = {t, miss:0, hit:0, over:false};
   stage.innerHTML = `<div class="goal"><span class="goal-num">${S.label[t]}</span><span class="goal-dots">${'<i></i>'.repeat(3)}</span></div><div class="sky" id="sky"></div>`;
-  guide(`${S.label[t]} の ふうせんを 3つ わってね`, `${V(t)} の ふうせんを、みっつ わってね`);
+  guide(`${S.label[t]} の ふうせんを 3つ わってね`, SAY.balloon(t));
   spawn(); spawnTimer = setInterval(spawn, 1150);
 }
 function spawn(){
@@ -656,8 +775,8 @@ function popBalloon(b){
     stage.querySelectorAll('.goal-dots i').forEach((d,i) => d.classList.toggle('on', i < q.hit));
     if (q.hit >= 3){
       q.over = true; clearInterval(spawnTimer); chime();
-      const p = pick(PRAISE);
-      guide(`${p} ${S.label[q.t]}（${S.yomi[q.t]}）を みっけ！`, `${p} ${V(q.t)}！`);
+      const [p, ps] = pick(PRAISE);
+      guide(`${p} ${S.label[q.t]}（${S.yomi[q.t]}）を みっけ！`, SAY.right(ps, q.t));
       record(q.t, q.miss <= 1);
       round.done++; drawStars();
       later(() => round.done >= ROUND ? reward() : nextBalloon(), 1800);
@@ -665,7 +784,7 @@ function popBalloon(b){
   } else {
     q.miss++; boop();
     b.animate([{transform:'rotate(0)'},{transform:'rotate(-18deg)'},{transform:'rotate(18deg)'},{transform:'rotate(0)'}],{duration:400});
-    guide(`それは ${S.label[n]}（${S.yomi[n]}）`, `それは ${V(n)}`);
+    guide(`それは ${S.label[n]}（${S.yomi[n]}）`, SAY.is(n));
   }
 }
 
@@ -692,8 +811,8 @@ function reward(){
     </div>`;
   chime();
   const name = S.mon[n][0];
-  if (isNew) guide(`あっ！ ${name}が でてきた！ カプセルを なげよう`, `あっ！ ${name} が でてきた！ どんぐりカプセルを、なげよう`);
-  else { guide(`${name}が あそびに きたよ！`, `${name} が、あそびに きたよ！ ${V(n)} の なかま だね`); afterCatch(); }
+  if (isNew) guide(`あっ！ ${name}が でてきた！ カプセルを なげよう`, SAY.monNew(n));
+  else { guide(`${name}が あそびに きたよ！`, SAY.monVisit(n)); afterCatch(); }
 }
 async function throwCapsule(){
   const {n, tok} = rw, cap = $('#capsule'), mon = $('#mon');
@@ -717,7 +836,7 @@ async function throwCapsule(){
   fanfare(); burst(mon, 36);
   cap.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'});
   mon.animate([{transform:'scale(.1)',opacity:0},{transform:'scale(1.12)',opacity:1},{transform:'scale(1)',opacity:1}],{duration:600,fill:'forwards'});
-  guide(`やったー！ ${S.mon[n][0]}が なかまに なった！`, `やったー！ ${S.mon[n][0]} が、なかまに なった！ ${S.belly(n)}`);
+  guide(`やったー！ ${S.mon[n][0]}が なかまに なった！`, SAY.caught(n));
   await wait(900);
   cap.remove();
   afterCatch();
@@ -731,19 +850,19 @@ async function afterCatch(){
     mon.getAnimations().forEach(a => a.cancel());
     mon.innerHTML = monSVG(e.n, e.from);
     $('#monName').innerHTML = `${name} <span class="st">${stars(e.from)}</span>`;
-    guide(`あれ？ ${name}が ひかってる…！`, `あれ？ ${name} が、ひかってる！`);
+    guide(`あれ？ ${name}が ひかってる…！`, SAY.glow(e.n));
     await mon.animate([{filter:'brightness(1)'},{filter:'brightness(4)'},{filter:'brightness(1)'},{filter:'brightness(4)'},{filter:'brightness(1)'},{filter:'brightness(5)'}],{duration:2000}).finished;
     if (tok !== token) return;
     mon.innerHTML = monSVG(e.n, e.to);
     $('#monName').innerHTML = `${name} <span class="st">${stars(e.to)}</span>`;
     mon.animate([{filter:'brightness(5)',transform:'scale(.9)'},{filter:'brightness(1)',transform:'scale(1)'}],{duration:500});
     sparkle(); burst(mon, 40);
-    guide(`${name}が しんかした！`, `${name} が、しんか した！ ${V(e.n)} が、とくいに なったね`);
+    guide(`${name}が しんかした！`, SAY.evolved(e.n));
   }
   await wait(rw.evolved.length ? 1600 : 400);
   if (tok !== token) return;
   $('#after').hidden = false;
-  if (rw.nn) { await wait(1800); if (tok === token) guide(`あたらしい ${S.name} ${S.label[rw.nn]} が でてきたよ`, `あたらしい ${S.name}、${V(rw.nn)} が でてきたよ`); }
+  if (rw.nn) { await wait(1800); if (tok === token) guide(`あたらしい ${S.name} ${S.label[rw.nn]} が でてきたよ`, SAY.newOne(rw.nn)); }
 }
 
 function book(){
@@ -755,7 +874,7 @@ function book(){
     ${pics.length ? `<div class="zhead">おうちの なかま</div><div class="homepics">${pics.map(p => `<button data-pic="${p.id}"><img src="${p.src}" alt="">${esc(p.name)}</button>`).join('')}</div>` : ''}
     <div class="row"><button class="pill" data-go="${lastGame}">あそぶ</button></div>`;
   const c = caughtCount();
-  guide(c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ');
+  guide(c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ', SAY.book(c));
 }
 
 const GO = { home, learn: () => learn(), find: () => startQuiz('find'), count: () => startQuiz('count'),
@@ -770,17 +889,17 @@ stage.addEventListener('click', e => {
   if (el.dataset.word){
     const w = WORD[+el.dataset.word];
     el.animate([{transform:'scale(1)'},{transform:'scale(1.1)'},{transform:'scale(1)'}],{duration:350});
-    return say(`«${w[1]}|${w[2]}»`);
+    return say(SAY.word(+el.dataset.word));
   }
   if (el.dataset.ans) return answer(+el.dataset.ans, el);
   if (el.classList.contains('item') || el.classList.contains('tenrow')) return countTap(el);
-  if (el.dataset.v){ const v = +el.dataset.v; say(numYomi(v)); tone(note(v), 0, .3, 'triangle', .14); el.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:350}); return; }
+  if (el.dataset.v){ const v = +el.dataset.v; say(SAY.num(v)); tone(note(v), 0, .3, 'triangle', .14); el.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:350}); return; }
   if (el.id === 'capsule') return throwCapsule();
   if (el.dataset.mon){
     const n = +el.dataset.mon;
     el.animate([{transform:'translateY(0)'},{transform:'translateY(-10px)'},{transform:'translateY(0)'}],{duration:350});
     tone(note(n), 0, .3, 'triangle', .14);
-    return guide(`${S.mon[n][0]}。${S.label[n]}（${S.yomi[n]}）の なかま`, `${S.mon[n][0]}。 ${V(n)} の なかま だよ`);
+    return guide(`${S.mon[n][0]}。${S.label[n]}（${S.yomi[n]}）の なかま`, SAY.mon(n));
   }
   if (el.dataset.pic){
     const p = pics.find(x => x.id === el.dataset.pic);
@@ -825,7 +944,13 @@ function openSheet(){
     <div class="opts">
       <label><input type="checkbox" id="optVoice" ${opt.voice?'checked':''}> 声と効果音を出す</label>
       <label><input type="checkbox" id="optAll" ${state.allOpen?'checked':''}> はじめから ${S.label[1]}〜${S.label[S.max]} をすべて出す</label>
+      ${CLIPS.size ? `<label><input type="checkbox" id="optClips" ${opt.clips!==false?'checked':''}> ずんだもんの声で読む</label>` : ''}
+      <label>日本語の声 <select id="optJa">${voiceOpts(voices(/^ja/i), opt.jaName)}</select></label>
+      <label>英語の声 <select id="optEn">${voiceOpts(voices(/^en/i), opt.enName)}</select></label>
+      <button class="sbtn add" id="tryVoice">🔊 ためしに きく</button>
     </div>
+    <p class="legend">名前に「Natural」「拡張」「プレミアム」「Enhanced」とつく声ほど自然です（おまかせ だと自動でえらびます）。どれも無料：パソコンは Microsoft Edge で開くと「Nanami Online (Natural)」が使えます。iPhone・iPad・Mac は 設定 →アクセシビリティ →読み上げコンテンツ →声 →日本語 から「Kyoko（拡張）」などを追加できます。${CLIPS.size ? 'ずんだもんの声で読むときも、英語と おうちの画像の名前は ここで選んだ声で読みます。' : ''}</p>
+    ${VOICE.credit ? `<p class="legend">音声：${esc(VOICE.credit)}</p>` : ''}
     <div class="sheet-actions">
       <button class="sbtn danger" id="reset">「${S.name}」の記録をリセット</button>
       <button class="sbtn primary" id="closeSheet">とじる</button>
@@ -833,6 +958,10 @@ function openSheet(){
   picMsg = '';
   sheet.hidden = false;
 }
+const voiceOpts = (vs, cur) => `<option value="">おまかせ</option>` + vs
+  .sort((a,b) => isNat(b) - isNat(a) || a.name.localeCompare(b.name))
+  .map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${isNat(v) ? '★ ' : ''}${esc(v.name)}</option>`).join('');
+const trySay = () => say(SAY.tryIt());
 function closeSheet(){ sheet.hidden = true; if (mode === 'home') home(); else if (mode === 'book') book(); }
 // 画像は正方形に切り抜いて 240px の JPEG に小さくしてから保存
 function shrink(file){
@@ -867,6 +996,7 @@ async function addPics(files){
 sheet.addEventListener('click', e => {
   if (e.target === sheet || e.target.id === 'closeSheet') return closeSheet();
   if (e.target.dataset.del){ pics = pics.filter(p => p.id !== e.target.dataset.del); savePics(); picMsg = '消しました。'; return openSheet(); }
+  if (e.target.id === 'tryVoice') return trySay();
   if (e.target.id === 'reset'){
     if (e.target.dataset.armed){ state = fresh(); save(); sheet.hidden = true; home(); }
     else { e.target.dataset.armed = '1'; e.target.textContent = 'もう一度おすと消えます（画像は残ります）'; }
@@ -875,7 +1005,11 @@ sheet.addEventListener('click', e => {
 sheet.addEventListener('change', e => {
   if (e.target.id === 'picFile') return addPics([...e.target.files]);
   if (e.target.dataset.pid){ const p = pics.find(x => x.id === e.target.dataset.pid); if (p) { p.name = e.target.value.trim(); savePics(); } return; }
-  if (e.target.id === 'optVoice'){ opt.voice = e.target.checked; saveOpt(); if (!opt.voice && 'speechSynthesis' in window) speechSynthesis.cancel(); return; }
+  if (e.target.id === 'optVoice'){ opt.voice = e.target.checked; saveOpt(); if (!opt.voice) stopVoice(); return; }
+  if (e.target.id === 'optClips'){ opt.clips = e.target.checked; saveOpt(); return trySay(); }
+  if (e.target.id === 'optJa' || e.target.id === 'optEn'){
+    opt[e.target.id === 'optJa' ? 'jaName' : 'enName'] = e.target.value; saveOpt(); pickVoice(); return trySay();
+  }
   if (e.target.id === 'optAll') state.allOpen = e.target.checked;
   save();
 });
