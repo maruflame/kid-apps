@@ -56,7 +56,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 
 /* home */
 .subj{display:flex;gap:6px;background:var(--paper);padding:6px;border-radius:999px;box-shadow:0 4px 0 var(--shade)}
-.subj button{border:0;border-radius:999px;padding:10px 22px;font-weight:900;font-size:clamp(17px,4.4vw,21px);background:none;color:var(--ink-soft)}
+.subj button{border:0;border-radius:999px;padding:10px 14px;font-weight:900;font-size:clamp(15px,3.9vw,21px);white-space:nowrap;background:none;color:var(--ink-soft)}
 .subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
 .path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
 .stone{position:relative;width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;font:600 24px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
@@ -66,6 +66,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:640px}
 .mode{border:0;border-radius:var(--r);padding:16px 10px 14px;background:var(--paper);border-bottom:8px solid var(--c);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:clamp(17px,4.4vw,23px)}
 .mode:active{transform:translateY(4px);border-bottom-width:4px;margin-top:4px}
+.mode:last-child:nth-child(odd){grid-column:1/-1}
 .mode .ic{font-size:clamp(34px,9vw,50px);line-height:1.1}
 .mode small{font-size:13px;font-weight:700;color:var(--ink-soft)}
 .book-btn{border:0;background:none;font-weight:900;font-size:19px;padding:8px 14px;border-radius:999px;color:var(--ink);display:flex;align-items:center;gap:6px}
@@ -75,12 +76,29 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .card{background:var(--paper);border-radius:36px;padding:14px 22px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 8px 0 var(--shade);width:100%;max-width:540px;box-sizing:border-box}
 .bignum{border:0;background:none;font:700 clamp(104px,28vw,180px)/1 var(--f-num);color:var(--c);padding:0 20px}
 .bignum .lo{margin-left:.06em;opacity:.6}
+.bignum .tens{color:var(--leaf)}
 .word{border:0;border-radius:24px;background:var(--ground);padding:10px 26px;display:flex;align-items:center;gap:14px;font:600 clamp(30px,8vw,44px)/1.1 var(--f-num);color:var(--ink)}
 .word .em{font-size:1.5em}
 .word b{color:var(--c)}
 .word:active{transform:scale(.96)}
 .hint{font-size:clamp(18px,4.6vw,22px);font-weight:900;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
 .hint .em{font-size:1.6em}
+.hint b{font-family:var(--f-num);font-size:1.3em;color:var(--leaf)}
+.hint b + b{color:var(--c)}
+/* 10のたば：1列10マス（5と5の間にすき間）。そろった列は まとめて1つのボタン */
+.bars{display:flex;flex-direction:column;gap:8px;width:100%;max-width:480px}
+.tenrow{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 4px repeat(5,minmax(0,1fr));gap:4px;width:100%;padding:5px;border:0;border-radius:14px;background:none;box-sizing:border-box}
+.tenrow > :nth-child(6){grid-column-start:7}
+button.tenrow{background:#DDF0E4}
+.tenrow .cell{border-radius:10px;border-width:2px;font-size:clamp(14px,4.2vw,26px)}
+.tenrow.tapped{background:#FFE48A;animation:pop .35s}
+.tenrow.tapped .cell{border-color:var(--sun)}
+.tenrow > .tag{position:absolute;right:-8px;top:-10px;min-width:30px;height:26px;border-radius:13px;background:var(--ink);color:#fff;font:600 16px/26px var(--f-num)}
+/* つぎは なに？ */
+.seq{flex-direction:row;justify-content:center;align-items:baseline;gap:clamp(4px,2vw,14px)}
+.seq .bignum{font-size:clamp(56px,16vw,104px);color:var(--ink);padding:0 6px}
+.seq .q{font:700 clamp(56px,16vw,104px)/1 var(--f-num);color:var(--sun);padding:0 6px;animation:bob 1.6s ease-in-out infinite}
+.seq .comma{font:700 clamp(30px,8vw,52px)/1 var(--f-num);color:var(--ink-soft)}
 .frame{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:100%;max-width:430px}
 .cell{aspect-ratio:1;border-radius:18px;background:var(--ground);display:grid;place-items:center;font-size:clamp(26px,7.5vw,42px);padding:0;position:relative;border:3px dashed var(--ground-2)}
 .cell.item{border:3px solid var(--ground-2);background:#fff}
@@ -182,7 +200,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){
   .owl,.rays,.balloon,.capsule svg,.cheer img{animation:none}
-  .cell.tapped,.choice.right{animation:none}
+  .cell.tapped,.tenrow.tapped,.choice.right,.seq .q{animation:none}
 }
 @media (max-height:640px){
   .bignum{font-size:clamp(80px,20vh,140px)}
@@ -217,6 +235,9 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 const OPTKEY = 'suuji-mori-opt', PICKEY = 'suuji-mori-pics';
 const ROUND = 5, MAXPICS = 12;
 const YOMI = ['ぜろ','いち','に','さん','よん','ご','ろく','なな','はち','きゅう','じゅう'];
+// 11からは「じゅう」＋一の位（にじゅう、にじゅういち…）
+const numYomi = v => v <= 10 ? YOMI[v] : (v >= 20 ? YOMI[Math.floor(v/10)] : '') + 'じゅう' + (v % 10 ? YOMI[v % 10] : '');
+const TSU = ['','ひとつ','ふたつ','みっつ'];
 // 形を身近なものに例える覚え方
 const HINT = {1:['✏️','えんぴつ'],2:['🦢','はくちょう'],3:['👂','おみみ'],4:['⛵','ヨット'],5:['🔑','かぎ'],
   6:['🍒','さくらんぼ'],7:['🪃','ブーメラン'],8:['⛄','ゆきだるま'],9:['🎈','ふうせん'],10:['✏️🥚','えんぴつと たまご']};
@@ -249,12 +270,12 @@ const pick = a => a[Math.floor(Math.random()*a.length)];
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* ---------- まなぶ もの（すうじ / ABC） ----------
-   どちらも 1〜max の番号で動かし、見た目・読み・モンスターだけを入れかえる。
+/* ---------- まなぶ もの（すうじ / 11〜30 / ABC） ----------
+   どれも 1〜max の番号で動かし、見た目・読み・モンスターだけを入れかえる（11〜30 は 番号+10 が その数）。
    読み上げ文の «英語|カタカナ» は英語の声で読む（英語の声がなければカタカナを日本語の声で）。 */
 const SUBJ = {
-  num: { id:'num', key:'suuji-mori-v1', max:10, name:'すうじ', unit:'数字', tab:'🔢 すうじ',
-    label: range(0,10).map(String), yomi: YOMI, color: COLOR, mon: MON,
+  num: { id:'num', key:'suuji-mori-v1', max:10, name:'すうじ', unit:'数字', tab:'🔢 1〜10',
+    label: range(0,10).map(String), yomi: YOMI, color: COLOR, mon: MON, val: n => n,
     v: n => YOMI[n],
     belly: n => `おなかの てんは、${YOMI[n]}こ だよ`,
     modes: [['learn','#2E8FD0','👀','みる・かぞえる','すうじと なかよし'],['find','#E5484D','🔍','すうじ さがし','どれ かな？'],
@@ -265,6 +286,25 @@ const SUBJ = {
       '数字の形を身近なもの（2は はくちょう）に例え、10のわく（5×2のマス）で量と数字を結びつけます。数字ごとの色も固定しています。',
       '5問クリアで、その回に正解した数字のモンスターが1ぴき仲間になります。名前は数字の読みではじまり、おなかの点の数がその数字です。',
       'なれ度2で1回、なれ度3でもう1回進化します。進化は下がりません。'] },
+  big: { id:'big', key:'suuji-mori-big-v1', max:20, name:'おおきい すうじ', unit:'数字', tab:'🧮 11〜30',
+    val: n => n + 10,
+    label: range(0,20).map(n => String(n+10)), yomi: range(0,20).map(n => numYomi(n+10)),
+    // 色は一の位の色（1〜10 と同じ）。13 と 23 は同じ色なので、十の位を見る練習になる
+    color: range(0,20).map(n => COLOR[n % 10 || 10]),
+    mon: range(0,20).map(n => [numYomi(n+10) + SUFFIX[n % SUFFIX.length], EARTYPES[(n+3) % EARTYPES.length]]),
+    v: n => numYomi(n+10),
+    belly: n => `おなかに、${numYomi(n+10)} が かいてあるよ`,
+    // まぎらわしい数（となり、10ちがい、12↔21 の入れかえ）を選択肢に優先して入れる
+    near: n => { const v = n+10, s = String(v); return [v-1, v+1, v-10, v+10, +(s[1]+s[0])].map(x => x-10); },
+    modes: [['learn','#2E8FD0','👀','みる・かぞえる','10の たばで かぞえる'],['find','#E5484D','🔍','すうじ さがし','どれ かな？'],
+      ['count','#3E9B6F','🧮','いくつ かな？','10と あと いくつ？'],['next','#F07C2A','➡️','つぎは なに？','じゅんばんに ならべる'],
+      ['balloon','#7A5AE0','🎈','ふうせん わり','おなじ すうじを パン！']],
+    notes: ['はじめは 11〜13 だけ。出ている数字がすべて「なれ度2」以上になると、次の数字が1つずつ登場します（30まで）。',
+      '「10のたば」で数をあらわします。10そろった列は1回タップで「じゅう」、のこりは1つずつ「じゅういち、じゅうに…」と数えます。「13 は 10 と 3」という見方が身につきます。',
+      '数字の色は一の位の色（1〜10と同じ色）、十の位は緑です。13 と 23 は同じ色なので、十の位をよく見る練習になります。',
+      '選択肢には 13 と 14、13 と 23、12 と 21 のような、まちがえやすい数をわざと混ぜます。',
+      '「つぎは なに？」は「14、15」のつぎを選ぶ、数の並びの練習です。11 のときは「9、10」のつぎなので、1〜10 からの橋わたしにもなります。',
+      '苦手な数字ほど多く出題、2択→3択→4択、まちがえても減点なし、5問クリアで仲間がふえる、のは 1〜10 と同じです。モンスターのおなかにはその数字が書いてあります。'] },
   abc: { id:'abc', key:'suuji-mori-abc-v1', max:26, name:'もじ', unit:'文字', tab:'🔤 ABC',
     label: [...LET], lower: [...LET.toLowerCase()], yomi: KANA,
     color: range(0,26).map(n => PAL[(n+9)%10]),
@@ -383,8 +423,8 @@ const EARS = {
 const STAR = (cx, cy, r) => `<path d="M${cx} ${cy-r} L${cx+r*.28} ${cy-r*.28} L${cx+r} ${cy} L${cx+r*.28} ${cy+r*.28} L${cx} ${cy+r} L${cx-r*.28} ${cy+r*.28} L${cx-r} ${cy} L${cx-r*.28} ${cy-r*.28}Z" fill="#FFD54A"/>`;
 function monSVG(n, st){
   const c = S.color[n], s = [0,.78,.9,1][st];
-  // おなか：すうじは点の数、ABCはその文字
-  const dots = S.id === 'abc'
+  // おなか：1〜10 は点の数、11〜30 と ABC はその文字
+  const dots = S.id !== 'num'
     ? `<text x="100" y="163" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="30" fill="${c}">${S.label[n]}</text>`
     : (n <= 5 ? range(0,n-1).map(i => [78 + i*11, 152]) : range(0,n-1).map(i => [78 + (i%5)*11, i<5 ? 146 : 158]))
       .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${c}"/>`).join('');
@@ -426,8 +466,10 @@ function pickTarget(){
   return lastT = t;
 }
 function makeChoices(t){
-  const k = Math.min(pool().length, [2,3,4,4][state.lv[t]]);
-  return shuffle([t, ...shuffle(pool().filter(n => n !== t)).slice(0, k-1)]);
+  const p = pool(), k = Math.min(p.length, [2,3,4,4][state.lv[t]]);
+  const near = S.near ? shuffle(S.near(t).filter(n => n !== t && p.includes(n))) : [];
+  const rest = shuffle(p.filter(n => n !== t && !near.includes(n)));
+  return shuffle([t, ...[...new Set(near), ...rest].slice(0, k-1)]);
 }
 function record(n, good){
   state.lv[n] = Math.max(0, Math.min(3, state.lv[n] + (good ? 1 : -1)));
@@ -449,7 +491,7 @@ const wait = ms => new Promise(r => later(r, ms));
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; clearInterval(spawnTimer); spawnTimer = null; }
 function setMode(m){
   clearTimers(); mode = m; token++;
-  const game = ['find','count','pair','balloon'].includes(m);
+  const game = ['find','count','pair','next','balloon'].includes(m);
   if (game) lastGame = m;
   starsEl.hidden = !game; spacer.hidden = game; homeBtn.hidden = m === 'home';
   drawStars();
@@ -483,6 +525,10 @@ function renderLearn(){
   const body = S.id === 'abc'
     ? `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
        <button class="word" data-word="${n}" aria-label="${esc(WORD[n][1])}"><span class="em">${WORD[n][0]}</span><span>${markWord(WORD[n][1], S.lower[n])}</span></button>`
+    : S.id === 'big'
+    ? `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}"><span class="tens">${S.label[n][0]}</span>${S.label[n][1]}</button>
+       <div class="hint">${S.label[n]} は ${tenHint(S.val(n))}</div>
+       ${qty(n, pickItem())}`
     : `<button class="bignum" data-n="${n}" aria-label="${YOMI[n]}">${n}</button>
        <div class="hint">${n} は ${HINT[n][1]} <span class="em">${HINT[n][0]}</span></div>
        ${frame(n, pickItem())}`;
@@ -493,25 +539,41 @@ function renderLearn(){
       <button class="arrow" data-step="1" ${n>=S.max?'disabled':''} aria-label="つぎの ${S.name}">▶</button>
     </div>`;
   if (S.id === 'abc') guide(`「${KANA[n]}」だよ。${WORD[n][0]} ${WORD[n][1]} の ${S.lower[n]}`, `${V(n)}。 «${WORD[n][1]}|${WORD[n][2]}» の、${V(n)}`);
+  else if (S.id === 'big'){
+    const v = S.val(n), ones = v % 10;
+    guide(`「${S.yomi[n]}」だよ。10の たばから かぞえよう`,
+      `${V(n)}。 ${ones ? `${numYomi(v - ones)} と ${YOMI[ones]} で` : `じゅうが ${TSU[v/10]} で`}、${V(n)}。 10の たばから、かぞえてみよう`);
+  }
   else guide(`「${YOMI[n]}」だよ。ひとつずつ さわって かぞえよう`, `${YOMI[n]}。 ${HINT[n][1]}の、${YOMI[n]}。 ひとつずつ さわって、かぞえてみよう`);
 }
 // 10のわく：5こまでは1だん、6こからは2だん
+const face = it => typeof it === 'string' ? it : `<img src="${it.src}" alt="" draggable="false">`;
+const faceLabel = it => typeof it === 'string' ? it : esc(it.name || 'え');
 function frame(n, it){
   const cells = n <= 5 ? 5 : 10;
-  const face = typeof it === 'string' ? it : `<img src="${it.src}" alt="" draggable="false">`;
-  const label = typeof it === 'string' ? it : esc(it.name || 'え');
   return `<div class="frame">${range(0,cells-1).map(i => i < n
-    ? `<button class="cell item" aria-label="${label}">${face}</button>`
+    ? `<button class="cell item" aria-label="${faceLabel(it)}">${face(it)}</button>`
     : `<span class="cell"></span>`).join('')}</div>`;
 }
+// 10のたば：そろった10は1列まるごと1つのボタン、のこりは1マスずつ
+function bars(v, it){
+  const full = Math.floor(v/10), ones = v % 10, f = face(it);
+  const rows = range(1, full).map(() => `<button class="tenrow" aria-label="10">${`<span class="cell item">${f}</span>`.repeat(10)}</button>`);
+  if (ones) rows.push(`<div class="tenrow">${range(0,9).map(i => i < ones
+    ? `<button class="cell item" aria-label="${faceLabel(it)}">${f}</button>`
+    : `<span class="cell"></span>`).join('')}</div>`);
+  return `<div class="bars">${rows.join('')}</div>`;
+}
+const qty = (n, it) => S.id === 'big' ? bars(S.val(n), it) : frame(n, it);
+const tenHint = v => v % 10 ? `<b>${v - v % 10}</b> と <b>${v % 10}</b>` : `<b>10</b> が ${v/10}つ`;
 function countTap(el){
-  if (el.classList.contains('tapped')) { say(YOMI[+el.dataset.c]); return; }
-  counted++; el.dataset.c = counted;
+  if (el.classList.contains('tapped')) { say(numYomi(+el.dataset.c)); return; }
+  counted += el.classList.contains('tenrow') ? 10 : 1; el.dataset.c = counted;
   el.classList.add('tapped'); el.insertAdjacentHTML('beforeend', `<span class="tag">${counted}</span>`);
-  tone(NOTES[counted-1], 0, .25, 'triangle', .13);
-  say(YOMI[counted]);
-  if (mode === 'learn' && counted === cur){
-    later(() => { chime(); burst($('.bignum'), 24); guide(`ぜんぶで ${cur}！`, `ぜんぶで、${YOMI[cur]}！`); }, 650);
+  tone(note(counted), 0, .25, 'triangle', .13);
+  say(numYomi(counted));
+  if (mode === 'learn' && counted === S.val(cur)){
+    later(() => { chime(); burst($('.bignum'), 24); guide(`ぜんぶで ${S.label[cur]}！`, `ぜんぶで、${V(cur)}！`); }, 650);
   }
 }
 
@@ -527,10 +589,15 @@ function nextQ(){
     // 問題の文字は黒にして、色で こたえが わからないようにする
     stage.innerHTML = `<div class="card count-card" style="--c:var(--ink)"><button class="bignum" data-n="${t}" aria-label="${S.yomi[t]}">${S.label[t]}</button></div><div class="choices">${btns}</div>`;
     guide(`「${S.label[t]}」の こもじは どれ かな？`, `おおもじの ${V(t)}。 こもじは、どれ かな？`);
+  } else if (mode === 'next'){
+    // まえの 2つを みて、つぎの数を えらぶ（11 のときは 9、10 から）
+    const v = S.val(t), seq = [v-2, v-1].map(x => `<button class="bignum" data-v="${x}" aria-label="${numYomi(x)}">${x}</button>`);
+    stage.innerHTML = `<div class="card count-card seq">${seq.join('<span class="comma">,</span>')}<span class="comma">,</span><span class="q">?</span></div><div class="choices">${btns}</div>`;
+    guide(`${v-2}、${v-1}、 つぎは なに？`, `${numYomi(v-2)}、 ${numYomi(v-1)}、 つぎは なに かな？`);
   } else {
     counted = 0;
     const it = pickItem(), nm = typeof it === 'string' ? '' : it.name;
-    stage.innerHTML = `<div class="card count-card">${frame(t, it)}</div><div class="choices">${btns}</div>`;
+    stage.innerHTML = `<div class="card count-card">${qty(t, it)}</div><div class="choices">${btns}</div>`;
     guide(nm ? `${nm}は いくつ いるかな？` : 'いくつ あるかな？', nm ? `${nm}は、いくつ いるかな？ さわって かぞえても いいよ` : 'いくつ あるかな？ さわって かぞえても いいよ');
   }
 }
@@ -552,7 +619,8 @@ function answer(n, el){
     el.classList.add('wrong'); el.disabled = true;
     if (mode === 'find') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${V(q.t)} は、どれかな？`);
     else if (mode === 'pair') guide(`おしい！ それは ${S.lower[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${V(q.t)} の こもじを、さがそう`);
-    else guide(`おしい！ もういちど かぞえよう`, `それは ${YOMI[n]}。 いっしょに かぞえてみよう`);
+    else if (mode === 'next') guide(`おしい！ それは ${S.label[n]}（${S.yomi[n]}）`, `それは ${V(n)}。 ${numYomi(S.val(q.t)-1)} の つぎは、なにかな？`);
+    else guide(`おしい！ もういちど かぞえよう`, `それは ${V(n)}。 いっしょに かぞえてみよう`);
     if (q.miss >= 2) stage.querySelector(`[data-ans="${q.t}"]`).classList.add('glow');
   }
 }
@@ -691,7 +759,7 @@ function book(){
 }
 
 const GO = { home, learn: () => learn(), find: () => startQuiz('find'), count: () => startQuiz('count'),
-  pair: () => startQuiz('pair'), balloon, book, again: () => GO[lastGame]() };
+  pair: () => startQuiz('pair'), next: () => startQuiz('next'), balloon, book, again: () => GO[lastGame]() };
 
 stage.addEventListener('click', e => {
   const el = e.target.closest('button'); if (!el || el.disabled || el.classList.contains('balloon')) return;
@@ -705,7 +773,8 @@ stage.addEventListener('click', e => {
     return say(`«${w[1]}|${w[2]}»`);
   }
   if (el.dataset.ans) return answer(+el.dataset.ans, el);
-  if (el.classList.contains('item')) return countTap(el);
+  if (el.classList.contains('item') || el.classList.contains('tenrow')) return countTap(el);
+  if (el.dataset.v){ const v = +el.dataset.v; say(numYomi(v)); tone(note(v), 0, .3, 'triangle', .14); el.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:350}); return; }
   if (el.id === 'capsule') return throwCapsule();
   if (el.dataset.mon){
     const n = +el.dataset.mon;
