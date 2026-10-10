@@ -27,6 +27,7 @@ function useSubj(id){
   const saved = load(S.key, s => Array.isArray(s.lv) && s.lv.length === S.max+1);
   state = Object.assign(fresh(), saved);
   delete state.voice;
+  document.body.dataset.subj = S.id;  // ひらがなは 教科書体の フォントで出す（style.css）
   pendingNew = null; lastT = 0;
   if (!S.modes.some(m => m[0] === lastGame)) lastGame = 'find';
 }
@@ -249,17 +250,22 @@ const caughtCount = () => range(1,S.max).filter(n => state.caught[n]).length;
 
 function home(){
   setMode('home');
-  const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('');
+  // せまい画面では 絵文字を かくして 4つを 1列に（style.css）
+  const tabs = Object.values(SUBJ).map(s => { const [ic, t] = s.tab.split(' ');
+    return `<button data-subj="${s.id}" aria-pressed="${s === S}"><span class="ti">${ic} </span>${t}</button>`; }).join('');
   const stones = range(1,S.max).map(n => n <= pool().length
     ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.label[n]}</button>`
     : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
   stage.innerHTML = `
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
     <div class="path-label">${S.name}の みち</div>
-    <div class="path">${stones}</div>
+    <div class="path${S.max > 30 ? ' long' : ''}">${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
       `<button class="mode${all.length % 2 && i === all.length-1 ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
+  // 数が多い教科は みちを 横にスクロール。いちばん新しい石が 見えるように
+  const long = stage.querySelector('.path.long');
+  if (long){ const st = long.querySelectorAll('.stone:not(.locked)'), last = st[st.length-1]; long.scrollLeft = last.offsetLeft - long.clientWidth / 2; }
   tell('home');
 }
 
@@ -276,6 +282,8 @@ const LEARN_CARD = {
        ${qty(n, pickItem())}`,
   abc: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
        <button class="word" data-word="${n}" aria-label="${esc(WORD[n][1])}"><span class="em">${WORD[n][0]}</span><span>${markWord(WORD[n][1], S.lower[n])}</span></button>`,
+  kana: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}</button>
+       <button class="word" data-word="${n}" aria-label="${esc(KWORD[n][1])}"><span class="em">${KWORD[n][0]}</span><span>${markWord(KWORD[n][1], S.label[n])}</span></button>`,
 };
 function renderLearn(){
   const n = cur;
@@ -423,7 +431,7 @@ function nextTrace(){
   tr = { strokes: (g.s || g).map(strokePts), si:0, idx:0, on:false };
   const lines = cls => tr.strokes.map(p => `<polyline class="${cls}" points="${cls === 'tg' ? ptsAttr(p) : ''}"/>`).join('');
   stage.innerHTML = `<div class="card count-card" style="--c:${S.color[t]}">
-    <svg class="trace" id="tsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${S.yomi[t]}">${lines('tg')}${lines('ink')}
+    <svg class="trace${S.thin ? ' thin' : ''}" id="tsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${S.yomi[t]}">${lines('tg')}${lines('ink')}
       <polygon class="arr" points="6,0 -4,5.5 -4,-5.5"/><circle class="dot" r="7.5"/></svg></div>`;
   drawTrace();
   tell('trace', t);

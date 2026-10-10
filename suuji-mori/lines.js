@@ -8,7 +8,8 @@
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
-const nameOf = n => `${S.label[n]}（${S.yomi[n]}）`;
+// 読みと字が おなじ（ひらがな）ときは 「あ」とだけ
+const nameOf = n => S.label[n] === S.yomi[n] ? `「${S.label[n]}」` : `${S.label[n]}（${S.yomi[n]}）`;
 const monName = n => S.mon[n][0];
 
 const LINE = {
@@ -45,7 +46,7 @@ const LINE = {
   newOne: line('n', n => [`あたらしい ${S.name} ${S.label[n]} が でてきたよ`, `新しい${S.unit}、${V(n)}が出てきたよ`]),
   book: line('c', c => [c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ', c ? `仲間が${c}匹いるよ。 触ってみてね` : '遊ぶと仲間が増えるよ']),
   mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monName(n)}。 ${V(n)}の仲間だよ`]),
-  word: line(null, n => [null, `«${WORD[n][1]}|${WORD[n][2]}»`]),
+  word: line('n', n => [null, S.word(n)], s => !!s.word),
   tryIt: line('', () => [null, S.tryIt()]),
 };
 

@@ -12,6 +12,7 @@
   --sky:#2E8FD0;
   --shade:rgba(31,61,53,.14);
   --f-num:"Fredoka","Zen Maru Gothic","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+  --f-kana:"Klee One","Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;
   --f-ja:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
   --r:28px;
 }
@@ -54,9 +55,15 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .subj{display:flex;gap:6px;background:var(--paper);padding:6px;border-radius:999px;box-shadow:0 4px 0 var(--shade)}
 .subj button{border:0;border-radius:999px;padding:12px 16px;font-weight:900;font-size:clamp(17px,4.6vw,22px);white-space:nowrap;background:none;color:var(--ink-soft)}
 .subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
+@media (max-width:560px){.subj .ti{display:none}.subj button{padding:12px}}
 .path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
 .stone{position:relative;width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font:600 27px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
 .stone.locked{background:var(--ground-2);color:var(--ink-soft);box-shadow:none;font-size:20px}
+/* ひらがなは 書くときの形に近い 教科書体で。数が多いので 石は小さく */
+[data-subj=kana] :is(.bignum,.choice,.stone,.word,.mon text,.newnum span){font-family:var(--f-kana)}
+.path.long{position:relative;flex-wrap:nowrap;justify-content:flex-start;max-width:100%;overflow-x:auto;padding-block:16px 8px;scrollbar-width:none;flex:none}
+.path.long::-webkit-scrollbar{display:none}
+.path.long .stone{flex:none}
 .stone .crown{position:absolute;top:-14px;font-size:16px}
 .path-label{font-size:15px;font-weight:700;color:var(--ink-soft);letter-spacing:.08em}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:640px}
@@ -131,6 +138,9 @@ button.tenrow{background:#DDF0E4}
 .trace .gap{stroke:var(--sun);stroke-width:16;opacity:.85;animation:blink 1s ease-in-out infinite}
 .trace.write{max-height:min(44vh,400px)}
 .trace .dot{fill:var(--leaf);stroke:#fff;stroke-width:2.5;transform-box:fill-box;transform-origin:center;animation:pulse 1.2s ease-in-out infinite}
+.trace.thin .tg{stroke-width:11}
+.trace.thin .ink{stroke-width:8}
+.trace.thin .dot{r:6px}
 
 /* balloons */
 .goal{display:flex;align-items:center;gap:14px;background:var(--paper);border-radius:999px;padding:6px 22px 6px 8px;box-shadow:0 5px 0 var(--shade)}
