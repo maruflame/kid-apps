@@ -416,9 +416,15 @@ const TOL = 16, AHEAD = 8;
 let tr = null;
 const ptsAttr = p => p.map(([x,y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
 const dist = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
-function trace(){ setMode('trace'); newRound(); nextTrace(); }
+// なぞりがきは 出ている数字に しばられず、ぜんぶの数字・文字を まぜた山から じゅんばんに出す（1回の中で 同じのは出ない）
+let traceDeck = [];
+function pickTrace(){
+  if (!traceDeck.length) traceDeck = shuffle(range(1, S.max).filter(n => n !== lastT));
+  return lastT = traceDeck.pop();
+}
+function trace(){ setMode('trace'); newRound(); traceDeck = []; nextTrace(); }
 function nextTrace(){
-  const t = pickTarget(), g = S.glyph(t), w = g.w || 100;
+  const t = pickTrace(), g = S.glyph(t), w = g.w || 100;
   q = {t, over:false};
   tr = { strokes: (g.s || g).map(strokePts), si:0, idx:0, on:false };
   const lines = cls => tr.strokes.map(p => `<polyline class="${cls}" points="${cls === 'tg' ? ptsAttr(p) : ''}"/>`).join('');
