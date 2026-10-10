@@ -125,6 +125,11 @@ button.tenrow{background:#DDF0E4}
 .trace .tg.later{opacity:.45}
 .trace .ink{stroke:var(--c);stroke-width:11}
 .trace .arr{fill:var(--leaf);opacity:.7}
+.trace .wg{stroke:var(--ground-2);stroke-width:14;opacity:.6;transition:stroke .4s,opacity .4s}
+.trace.help .wg{opacity:1}
+.trace.done .wg{stroke:var(--c);opacity:.35}
+.trace .gap{stroke:var(--sun);stroke-width:16;opacity:.85;animation:blink 1s ease-in-out infinite}
+.trace.write{max-height:min(44vh,400px)}
 .trace .dot{fill:var(--leaf);stroke:#fff;stroke-width:2.5;transform-box:fill-box;transform-origin:center;animation:pulse 1.2s ease-in-out infinite}
 
 /* balloons */
@@ -154,6 +159,7 @@ button.tenrow{background:#DDF0E4}
 .pill{border:0;border-radius:999px;padding:18px 34px;font-weight:900;font-size:23px;background:var(--berry);color:#fff;box-shadow:0 5px 0 #A92F33}
 .pill.alt{background:var(--paper);color:var(--ink);box-shadow:0 5px 0 var(--shade)}
 .pill:active{transform:translateY(4px);box-shadow:none}
+.pill:disabled{opacity:.4;transform:none;box-shadow:none;cursor:default}
 .newnum{border:0;display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:999px;padding:8px 24px 8px 8px;font-weight:900;font-size:22px;box-shadow:0 5px 0 var(--shade)}
 .newnum span{width:58px;height:58px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font:700 36px/1 var(--f-num)}
 
@@ -206,9 +212,15 @@ button.tenrow{background:#DDF0E4}
 @keyframes glow{50%{box-shadow:0 8px 0 var(--shade),0 0 0 10px var(--sun)}}
 @keyframes sway{50%{transform:rotate(6deg)}0%,100%{transform:rotate(-6deg)}}
 @keyframes pulse{50%{transform:scale(1.3)}}
+@keyframes blink{50%{opacity:.35}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){
-  .owl,.rays,.balloon,.capsule svg,.cheer img,.trace .dot{animation:none}
+  .owl,.rays,.balloon,.capsule svg,.cheer img,.trace .wg{stroke:var(--ground-2);stroke-width:14;opacity:.6;transition:stroke .4s,opacity .4s}
+.trace.help .wg{opacity:1}
+.trace.done .wg{stroke:var(--c);opacity:.35}
+.trace .gap{stroke:var(--sun);stroke-width:16;opacity:.85;animation:blink 1s ease-in-out infinite}
+.trace.write{max-height:min(44vh,400px)}
+.trace .dot{animation:none}
   .cell.tapped,.tenrow.tapped,.choice.right,.seq .q{animation:none}
 }
 @media (max-height:640px){
@@ -218,11 +230,12 @@ button.tenrow{background:#DDF0E4}
 /* スマホ：ホームを1画面におさめる（モードの小さい説明は省く。背の低い iPhone SE などは さらに詰める） */
 @media (max-height:860px){
   .mode small{display:none}
+  .mode{padding:10px 8px 8px}
 }
 @media (max-height:740px){
   .stone{width:44px;height:44px;font-size:23px}
   .mode .ic{font-size:34px}
-  .mode{padding:12px 8px 10px}
+  .mode{padding:6px 8px 4px}
   .guide{padding-block:2px}
   .stage{gap:10px}
 }
