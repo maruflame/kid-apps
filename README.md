@@ -2,7 +2,7 @@
 
 ## アプリ一覧
 
-- [すうじのもり](https://maruflame.github.io/kid-apps/suuji-mori/)
+- [すうじのもり](https://maruflame.github.io/kid-apps/suuji-mori/)（いちど開くと オフラインでも使えます。スマホは「ホーム画面に追加」でアプリのように開けます）
 
 ## クレジット
 

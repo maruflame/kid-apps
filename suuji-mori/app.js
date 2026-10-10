@@ -774,12 +774,28 @@ function openSheet(){
     </div>
     <p class="legend">名前に「Natural」「拡張」「プレミアム」「Enhanced」とつく声ほど自然です（おまかせ だと自動でえらびます）。どれも無料：パソコンは Microsoft Edge で開くと「Nanami Online (Natural)」が使えます。iPhone・iPad・Mac は 設定 →アクセシビリティ →読み上げコンテンツ →声 →日本語 から「Kyoko（拡張）」などを追加できます。${CLIPS.size ? 'ずんだもんの声で読むときも、英語と おうちの画像の名前は ここで選んだ声で読みます。' : ''}</p>
     ${VOICE.credit ? `<p class="legend">音声：${esc(VOICE.credit)}</p>` : ''}
+    <h3>オフライン</h3>
+    <p class="legend" id="offline">しらべています…</p>
     <div class="sheet-actions">
       <button class="sbtn danger" id="reset">「${S.name}」の記録をリセット</button>
       <button class="sbtn primary" id="closeSheet">とじる</button>
     </div>`;
   picMsg = '';
   sheet.hidden = false;
+  offlineInfo().then(t => { const el = $('#offline'); if (el) el.textContent = t; });
+}
+// ネットにつながっていなくても あそべるように、アプリと音声を この端末に しまっておく（sw.js）
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+}
+async function offlineInfo(){
+  if (!('serviceWorker' in navigator) || !window.caches) return 'このブラウザでは オフラインで使えません。';
+  if (!navigator.serviceWorker.controller) return 'じゅんび中です。ネットにつないだまま、しばらくしてから もう一度ひらいてください。';
+  let n = 0;
+  try { for (const k of await caches.keys()) if (k.startsWith('suuji-voice-')) n += (await (await caches.open(k)).keys()).length; } catch(e) {}
+  const home = 'ホーム画面に追加すると アプリのように開けます（iPhone・iPad は Safari の共有ボタン →「ホーム画面に追加」。追加したら ネットにつないだまま いちど開いてください）。';
+  return (n >= CLIPS.size ? 'ネットにつながっていなくても あそべます。' : `ずんだもんの声を この端末に しまっています（${n}/${CLIPS.size}）。おわるまでは オフラインのとき ブラウザの声で読みます。`) + home;
 }
 const voiceOpts = (vs, cur) => `<option value="">おまかせ</option>` + vs
   .sort((a,b) => isNat(b) - isNat(a) || a.name.localeCompare(b.name))
