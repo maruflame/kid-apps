@@ -1,4 +1,4 @@
-/* すうじのもり：まなぶ もの の データ（DOM を使わない）
+/* Meridian：まなぶ もの の データ（DOM を使わない）
    make-voice.py も JavaScriptCore でこのファイルを読んで 読み上げ文を数えるので、document や window は使わない。 */
 const YOMI = ['ぜろ','いち','に','さん','よん','ご','ろく','なな','はち','きゅう','じゅう'];
 // 11からは「じゅう」＋一の位（にじゅう、にじゅういち…）
@@ -29,6 +29,10 @@ const BALLOON = ['#E5484D','#2E8FD0','#7A5AE0','#14998F','#D9468F','#E06A1B'];
 // [表示, 読み上げ]
 const PRAISE = [['やったね！','やったね！'],['すごい！','すごい！'],['せいかい！','正解！'],['ばっちり！','ばっちり！'],['かんぺき！','完璧！']];
 const CONF = ['#E5484D','#FFC93C','#2E8FD0','#3E9B6F','#D9468F','#7A5AE0'];
+// ぬりえ の いろ：[色, ふきだし, 読み上げ]
+const PALETTE = [['#FF8FB8','ピンク','ピンク'],['#F2545B','あか','赤'],['#FFA552','オレンジ','オレンジ'],['#FFD84D','きいろ','黄色'],
+  ['#6CCB7A','みどり','緑'],['#7FD8D0','みずいろ','水色'],['#5AA9F0','あお','青'],['#A77BF0','むらさき','紫'],
+  ['#D3B6FF','うすむらさき','薄紫'],['#A9744F','ちゃいろ','茶色'],['#FFE0CC','クリーム','クリーム'],['#FFFFFF','しろ','白']];
 const range = (a,b) => Array.from({length:b-a+1},(_,i)=>a+i);
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };

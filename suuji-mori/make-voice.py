@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""すうじのもり の読み上げ音声を VOICEVOX で作る（macOS 用）。
+"""Meridian（suuji-mori）の読み上げ音声を VOICEVOX で作る（macOS 用）。
 
 つかいかた:
   1. VOICEVOX（https://voicevox.hiroshiba.jp/）を起動しておく

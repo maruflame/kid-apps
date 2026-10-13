@@ -1,4 +1,4 @@
-/* すうじのもり：画面と あそび（data.js・lines.js・glyphs.js のあとに読む） */
+/* Meridian：画面と あそび（data.js・lines.js・glyphs.js のあとに読む） */
 (() => {
 const OPTKEY = 'suuji-mori-opt', PICKEY = 'suuji-mori-pics';
 const ROUND = 5, MAXPICS = 12;
@@ -249,7 +249,8 @@ const caughtCount = () => range(1,S.max).filter(n => state.caught[n]).length;
 
 function home(){
   setMode('home');
-  const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('');
+  const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
+    + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
   const stones = range(1,S.max).map(n => n <= pool().length
     ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.label[n]}</button>`
     : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
@@ -572,11 +573,52 @@ function book(){
   tell('book', caughtCount());
 }
 
-const GO = { home, learn: () => learn(), balloon, trace, book, again: () => GO[lastGame]() };
+/* ---------- ぬりえ ----------
+   いろを えらんで 絵の部分をタップすると、その部分（おなじ なまえの部分ぜんぶ）が その色になる。
+   ぬった色は 保存するので、つぎに開いても つづきから。ぜんぶ ぬれたら おいわい。 */
+const NURIEKEY = 'suuji-mori-nurie', PIC = 'princess';
+const nu = load(NURIEKEY, v => typeof v === 'object') || {};  // { princess: { hair: '#FFD84D', ... } }
+let pen = 0;  // えらんでいる PALETTE の番号
+const picFill = () => nu[PIC] = nu[PIC] || {};
+const picDone = () => { const P = PICTURES[PIC]; return P.parts.every(([k]) => picFill()[k]); };
+function nurie(){
+  setMode('nurie');
+  const P = PICTURES[PIC], fill = picFill();
+  stage.innerHTML = `
+    <div class="nurie-card"><svg class="nurie" id="nsvg" viewBox="0 0 ${P.w} ${P.h}" role="img" aria-label="${P.name}の ぬりえ">
+      ${P.parts.map(([k, tag, a]) => `<${tag} class="part" data-part="${k}" ${a} fill="${fill[k] || '#fff'}"/>`).join('')}
+      <g class="deco">${P.deco}</g></svg></div>
+    <div class="palette" role="group" aria-label="いろ">${PALETTE.map(([c, nm], i) =>
+      `<button class="paint" data-paint="${i}" style="--p:${c}" aria-label="${nm}" aria-pressed="${i === pen}"></button>`).join('')}</div>
+    <button class="pill alt nreset" id="nreset">🔄 さいしょから</button>`;
+  tell('nurie');
+}
+function choosePen(el){
+  pen = +el.dataset.paint;
+  stage.querySelectorAll('.paint').forEach(b => b.setAttribute('aria-pressed', b === el));
+  tone(660 + pen * 30, 0, .15, 'triangle', .1); bounce(el, 1.2);
+  tell('color', PALETTE[pen]);
+}
+function paint(part){
+  const k = part.dataset.part, c = PALETTE[pen][0], was = picDone();
+  picFill()[k] = c; store(NURIEKEY, nu);
+  $('#nsvg').querySelectorAll(`[data-part="${k}"]`).forEach(p => p.setAttribute('fill', c));
+  popSnd();
+  if (!was && picDone()){ fanfare(); burst($('#nsvg'), 40); tell('nurieDone'); }
+}
+function resetNurie(btn){
+  if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = '🔄 もういちど おすと けすよ'; return tell('nurieReset'); }
+  nu[PIC] = {}; store(NURIEKEY, nu); boop(); nurie();
+}
+
+const GO = { home, learn: () => learn(), balloon, trace, book, nurie, again: () => GO[lastGame]() };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 
 stage.addEventListener('click', e => {
+  const part = mode === 'nurie' && e.target.closest('.part'); if (part) return paint(part);
   const el = e.target.closest('button'); if (!el || el.disabled || el.classList.contains('balloon')) return;
+  if (el.dataset.paint) return choosePen(el);
+  if (el.id === 'nreset') return resetNurie(el);
   if (el.dataset.subj){ if (el.dataset.subj !== S.id) { useSubj(el.dataset.subj); tone(784,0,.15,'triangle',.12); } return home(); }
   if (el.dataset.go) return GO[el.dataset.go]();
   if (el.dataset.learn) return learn(+el.dataset.learn);
