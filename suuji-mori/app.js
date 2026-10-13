@@ -701,7 +701,7 @@ function book(){
 /* ---------- ぬりえ ----------
    まず おひめさまを えらぶ（小さな絵には いま ぬってある色が出る）。
    いろを えらんで 絵の部分をタップすると、その部分（おなじ なまえの部分ぜんぶ）が その色になる。
-   ぬった色は 絵ごとに保存するので、つぎに開いても つづきから。ぜんぶ ぬれたら おいわい。 */
+   ぬった色は 絵ごとに保存するので、つぎに開いても つづきから。ぜんぶ ぬれたら おいわいして、一覧に もどる。 */
 const NURIEKEY = 'suuji-mori-nurie';
 const nu = load(NURIEKEY, v => typeof v === 'object') || {};  // { princess: { hair: '#FFD84D', ... }, hana: {...} }
 let pen = 0, pic = 'princess';  // えらんでいる PALETTE の番号 と 絵
@@ -710,11 +710,13 @@ const picDone = (id = pic) => PICTURES[id].parts.every(([k]) => picFill(id)[k]);
 const picSVG = (id, attrs, parts) => { const P = PICTURES[id], fill = picFill(id);
   return `<svg viewBox="0 0 ${P.w} ${P.h}" ${attrs}>${P.parts.map(([k, tag, a]) => `<${tag} ${parts ? `class="part" data-part="${k}" ` : 'class="pt" '}${a} fill="${fill[k] || '#fff'}"/>`).join('')}
     <g class="deco">${P.deco}</g></svg>`; };
-function nurie(){
+// done：いま ぬりおわった絵（一覧で ぴょんと はねさせる）
+function nurie(done){
   setMode('nurie');
   stage.innerHTML = `<div class="gallery">${Object.entries(PICTURES).map(([id, P]) =>
     `<button class="thumb" data-draw="${id}">${picSVG(id, 'class="nurie-mini" aria-hidden="true"')}<span>${picDone(id) ? '⭐ ' : ''}${P.short || P.name}</span></button>`).join('')}</div>`;
-  tell('nurieGallery');
+  if (done){ const t = stage.querySelector(`[data-draw="${done}"]`); t.scrollIntoView({ block: 'nearest' }); bounce(t, 1.12); sparkle(); }
+  else tell('nurieGallery');
 }
 function openPic(id){
   pic = id; setMode('nurie');
@@ -736,7 +738,7 @@ function paint(part){
   picFill()[k] = c; store(NURIEKEY, nu);
   $('#nsvg').querySelectorAll(`[data-part="${k}"]`).forEach(p => p.setAttribute('fill', c));
   popSnd();
-  if (!was && picDone()){ fanfare(); burst($('#nsvg'), 40); tell('nurieDone'); }
+  if (!was && picDone()){ fanfare(); burst($('#nsvg'), 40); tell('nurieDone'); later(() => nurie(pic), 3000); }
 }
 function resetNurie(btn){
   if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = '🔄 もういちど おすと けすよ'; return tell('nurieReset'); }
