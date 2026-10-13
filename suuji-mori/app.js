@@ -230,7 +230,7 @@ function record(n, good){
 const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITEMS);
 
 /* ---------- がめん ---------- */
-const QUIZ = ['find','count','pair','next'], GAMES = [...QUIZ, 'balloon', 'trace'];
+const QUIZ = ['find','count','pair','next'], GAMES = [...QUIZ, 'balloon', 'trace', 'write'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
 let round = {done:0, hits:[], evolved:[]};
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -486,6 +486,131 @@ function strokeDone(){
   win(n, nextTrace, 1800);
 }
 
+/* ---------- かいてみよう ----------
+   うすい手本の上に 自由に書く。書いた線と 手本を くらべて 判定する（書き順と 書いた向きは見ない）。
+   点には 線の向き（0〜180°）もつけて、近くても 向きが ちがう線は 合っていないとみなす（O と D、H と M などを見分ける）。
+   ・手本の点のうち 同じ向きの書いた線が W_HIT 以内にある わりあい：全体で 88% 以上、どの画も 85% 以上
+   ・書いた点のうち 同じ向きの手本が W_HIT 以内にある わりあい：90% 以上、長さも 手本の2倍まで（ぐちゃぐちゃ塗りは ×）
+   ぜんたいが すこし ずれて書いていても いいように、書いた線を 手本に いちばん合う所まで（W_SHIFT まで）ずらしてから くらべる。
+   指をはなして すこし待ち、書けていれば 自動で せいかい。「できた！」で その場で判定し、だめなら どこが だめかを 見せる。
+   なぞりがきと同じく なれ度は 上げ下げせず、ごほうびの候補にだけ入れる。 */
+const W_HIT = 11, W_ANG = Math.PI / 6, W_SHIFT = 5, W_WAIT = 900;
+let wr = null;
+// 書いた線を 2 ずつの点に（すばやく書くと 点が とびとびになるので）
+function dense(pts){
+  const out = [pts[0]];
+  for (let i=1;i<pts.length;i++){
+    const [x0, y0] = pts[i-1], [x1, y1] = pts[i], k = Math.ceil(dist(pts[i-1], pts[i]) / 2);
+    for (let j=1;j<=k;j++) out.push([x0 + (x1-x0)*j/k, y0 + (y1-y0)*j/k]);
+  }
+  return out;
+}
+// 点に 線の向きをつける：[x, y, 向き]（k こ前と後の点から。指の ふるえで ぶれないよう 書いた線は 広めに見る）
+const withDir = (p, k) => p.map((pt, i) => { const a = p[Math.max(0, i-k)], b = p[Math.min(p.length-1, i+k)];
+  return [pt[0], pt[1], (Math.atan2(b[1]-a[1], b[0]-a[0]) + Math.PI) % Math.PI]; });
+const angGap = (a, b) => { const d = Math.abs(a - b) % Math.PI; return Math.min(d, Math.PI - d); };
+const match = (pt, set) => set.some(p => dist(pt, p) <= W_HIT && angGap(pt[2], p[2]) <= W_ANG);
+const rate = a => a.filter(Boolean).length / a.length;
+const pathLen = s => s.reduce((a, p) => a + p.slice(1).reduce((b, pt, i) => b + dist(pt, p[i]), 0), 0);
+// 書いた点を それぞれ いちばん近い手本の点へ よせる平均で ずらす（3回くりかえす）
+function bestShift(tpl, ink){
+  const lim = v => Math.max(-W_SHIFT, Math.min(W_SHIFT, v));
+  let dx = 0, dy = 0;
+  for (let it=0;it<3;it++){
+    let sx = 0, sy = 0;
+    for (const [x, y] of ink){
+      let b = tpl[0], bd = Infinity;
+      for (const q of tpl){ const d = Math.hypot(x+dx-q[0], y+dy-q[1]); if (d < bd){ bd = d; b = q; } }
+      sx += b[0] - x - dx; sy += b[1] - y - dy;
+    }
+    dx = lim(dx + sx / ink.length); dy = lim(dy + sy / ink.length);
+  }
+  return [dx, dy];
+}
+function write(){ setMode('write'); newRound(); nextWrite(); }
+function nextWrite(){
+  const t = pickTarget(), g = S.glyph(t), w = g.w || 100, gd = (g.s || g).map(strokePts);
+  q = {t, miss:0, over:false};
+  wr = { gd, ink: [], cur: null, gen: 0, len: pathLen(gd) };
+  stage.innerHTML = `<div class="card count-card" style="--c:${S.color[t]}">
+    <svg class="trace write" id="wsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${S.yomi[t]}">
+      ${gd.map(p => `<polyline class="wg" points="${ptsAttr(p)}"/>`).join('')}<g class="gaps"></g><g class="inks"></g></svg>
+    <div class="row"><button class="pill alt" data-wact="clear" disabled>けす</button><button class="pill" data-wact="done" disabled>できた！</button></div></div>`;
+  tell('write', t);
+}
+const writeBtns = () => stage.querySelectorAll('[data-wact]').forEach(b => b.disabled = q.over || !wr.ink.length);
+function writeDown(svg, e){
+  e.preventDefault();
+  if (q.over) return;
+  wr.gen++;
+  svg.querySelector('.gaps').innerHTML = '';
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  el.setAttribute('class', 'ink');
+  svg.querySelector('.inks').appendChild(el);
+  const pt = svgPt(svg, e);
+  wr.cur = { pts: [pt, [pt[0] + .1, pt[1]]], el };  // 点だけでも 見えるように 2点にしておく
+  wr.ink.push(wr.cur);
+  el.setAttribute('points', ptsAttr(wr.cur.pts));
+  try { svg.setPointerCapture(e.pointerId); } catch(err) {}
+  writeBtns();
+}
+function writeMove(e){
+  const svg = $('#wsvg'); if (!svg) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [], p = wr.cur.pts;
+  for (const ev of evs.length ? evs : [e]){
+    const pt = svgPt(svg, ev);
+    if (dist(pt, p[p.length-1]) >= 1) p.push(pt);
+  }
+  wr.cur.el.setAttribute('points', ptsAttr(p));
+}
+function writeUp(){
+  wr.cur = null;
+  const gen = ++wr.gen;
+  later(() => { if (gen === wr.gen && !q.over && judge().ok) writeOk(); }, W_WAIT);
+}
+function judge(){
+  const raw = wr.ink.map(st => dense(st.pts)), [dx, dy] = bestShift(wr.gd.flat(), raw.flat());
+  const ink = raw.flatMap(p => withDir(p.map(([x, y]) => [x + dx, y + dy]), 5)), gd = wr.gd.map(p => withDir(p, 2)), tpl = gd.flat();
+  const hit = gd.map(p => p.map(pt => match(pt, ink)));
+  const off = rate(ink.map(pt => match(pt, tpl))) < .9 || pathLen(wr.ink.map(st => st.pts)) > wr.len * 2 + 30;
+  return { ok: !off && rate(hit.flat()) >= .88 && Math.min(...hit.map(rate)) >= .85, off, hit };
+}
+function writeClear(){
+  wr.gen++; wr.ink = []; wr.cur = null;
+  const svg = $('#wsvg');
+  svg.querySelector('.inks').innerHTML = svg.querySelector('.gaps').innerHTML = '';
+  writeBtns();
+}
+function writeDone(){
+  if (q.over) return;
+  wr.gen++;
+  const j = judge(), svg = $('#wsvg');
+  if (j.ok) return writeOk();
+  q.miss++; boop();
+  svg.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}], {duration:350});
+  // 2回まちがえたら 手本を こくする
+  if (q.miss >= 2) svg.classList.add('help');
+  if (j.off){ writeClear(); return tell('writeOff'); }
+  // 書けていない所（つづいた点）を 黄色で しめす
+  const runs = [];
+  wr.gd.forEach((p, i) => { let r = null; p.forEach((pt, k) => {
+    if (j.hit[i][k]) r = null;
+    else { if (!r) runs.push(r = []); r.push(pt); }
+  }); });
+  svg.querySelector('.gaps').innerHTML = runs.map(r => `<polyline class="gap" points="${ptsAttr(r.length > 1 ? r : [r[0], [r[0][0] + .1, r[0][1]]])}"/>`).join('');
+  tell('writeMore');
+}
+function writeOk(){
+  const n = q.t, svg = $('#wsvg');
+  q.over = true; writeBtns();
+  svg.querySelector('.gaps').innerHTML = '';
+  svg.classList.add('done');
+  chime(); burst(svg, 24);
+  svg.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:500});
+  round.hits.push(n);
+  win(n, nextWrite, 1800);
+}
+
 /* ---------- ごほうび：なかまに する ---------- */
 let rw = null;
 function reward(){
@@ -611,7 +736,7 @@ function resetNurie(btn){
   nu[PIC] = {}; store(NURIEKEY, nu); boop(); nurie();
 }
 
-const GO = { home, learn: () => learn(), balloon, trace, book, nurie, again: () => GO[lastGame]() };
+const GO = { home, learn: () => learn(), balloon, trace, write, book, nurie, again: () => GO[lastGame]() };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 
 stage.addEventListener('click', e => {
@@ -625,6 +750,7 @@ stage.addEventListener('click', e => {
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
   if (el.dataset.word){ bounce(el, 1.1); return sayLine('word', +el.dataset.word); }
   if (el.dataset.ans) return answer(+el.dataset.ans, el);
+  if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : writeClear();
   if (el.classList.contains('item') || el.classList.contains('tenrow')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
   if (el.id === 'capsule') return throwCapsule();
@@ -645,9 +771,16 @@ stage.addEventListener('click', e => {
 stage.addEventListener('pointerdown', e => {
   const b = e.target.closest('.balloon'); if (b) { e.preventDefault(); popBalloon(b); }
   const t = mode === 'trace' && e.target.closest('#tsvg'); if (t) traceDown(t, e);
+  const w = mode === 'write' && e.target.closest('#wsvg'); if (w) writeDown(w, e);
 });
-stage.addEventListener('pointermove', e => { if (mode === 'trace' && tr && tr.on) traceMove(e); });
-['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, () => { if (tr) tr.on = false; }));
+stage.addEventListener('pointermove', e => {
+  if (mode === 'trace' && tr && tr.on) traceMove(e);
+  if (mode === 'write' && wr && wr.cur) writeMove(e);
+});
+['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, () => {
+  if (tr) tr.on = false;
+  if (mode === 'write' && wr && wr.cur) writeUp();
+}));
 homeBtn.addEventListener('click', home);
 $('#owl').addEventListener('click', () => say(lastSpoken));
 
