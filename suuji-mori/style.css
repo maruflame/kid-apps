@@ -54,12 +54,15 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .subj{display:flex;gap:6px;background:var(--paper);padding:6px;border-radius:999px;box-shadow:0 4px 0 var(--shade)}
 .subj button{border:0;border-radius:999px;padding:12px 16px;font-weight:900;font-size:clamp(17px,4.6vw,22px);white-space:nowrap;background:none;color:var(--ink-soft)}
 .subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
-/* スマホ：タブが 4つ 並ばないので 2×2 に */
-@media (max-width:480px){ .subj{display:grid;grid-template-columns:1fr 1fr;border-radius:26px} .subj button{padding:9px 12px} }
 .path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
 .stone{position:relative;width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font:600 27px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
 .stone.locked{background:var(--ground-2);color:var(--ink-soft);box-shadow:none;font-size:20px}
 .stone .crown{position:absolute;top:-14px;font-size:16px}
+/* 1〜30・ABC のように 多いときは 10こずつ ならべる（10のまとまりが 見える） */
+.path.many{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;width:100%;max-width:520px}
+.path.many .stone{width:auto;height:auto;aspect-ratio:1;font-size:clamp(14px,4vw,22px);box-shadow:0 3px 0 var(--shade)}
+.path.many .stone.locked{font-size:clamp(11px,3vw,16px)}
+.path.many .stone .crown{top:-11px;font-size:12px}
 .path-label{font-size:15px;font-weight:700;color:var(--ink-soft);letter-spacing:.08em}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:640px}
 .mode{border:0;border-radius:var(--r);padding:16px 8px 14px;background:var(--paper);border-bottom:8px solid var(--c);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:clamp(19px,5vw,24px)}
@@ -247,6 +250,7 @@ button.tenrow{background:#DDF0E4}
 /* スマホ：ホームを1画面におさめる（モードの小さい説明は省く。背の低い iPhone SE などは さらに詰める） */
 @media (max-height:860px){
   .mode small,.path-label{display:none}
+  .mode .ic{font-size:clamp(32px,8.5vw,44px)}
   .stage{gap:12px}
   .stone{width:48px;height:48px;font-size:25px}
   .mode{padding:10px 8px 8px}

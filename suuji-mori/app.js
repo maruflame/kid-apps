@@ -22,6 +22,20 @@ const saveOpt = () => store(OPTKEY, opt);
 const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), caught: {}, unlocked: 3, allOpen: false });
 let state;
 const save = () => store(S.key, state);
+// むかしの「1〜10」と「11〜30」の記録を、1〜30 の記録に まとめる（まだ無いときに いちどだけ。むかしの記録は消さない）
+(function mergeOldNumbers(){
+  if (load(SUBJ.num.key, () => true)) return;
+  const ok = len => s => Array.isArray(s.lv) && s.lv.length === len;
+  const a = load('suuji-mori-v1', ok(11)), b = load('suuji-mori-big-v1', ok(21));
+  if (!a && !b) return;
+  const lv = Array(31).fill(0), evo = Array(31).fill(1), caught = {};
+  const take = (old, from, to, shift) => { if (!old) return;
+    for (let n = from; n <= to; n++){ lv[n + shift] = old.lv[n] || 0; evo[n + shift] = (old.evo && old.evo[n]) || 1; if (old.caught && old.caught[n]) caught[n + shift] = true; } };
+  take(a, 1, 10, 0); take(b, 1, 20, 10);
+  // 1〜10 が ぜんぶ出ていれば、11〜30 の進みを つづける
+  const unlocked = !a ? 3 : a.unlocked < 10 ? a.unlocked : Math.min(30, 10 + (b ? b.unlocked : 0));
+  store(SUBJ.num.key, { lv, evo, caught, unlocked, allOpen: !!((a && a.allOpen) || (b && b.allOpen)) });
+})();
 function useSubj(id){
   S = SUBJ[id] || SUBJ.num; opt.subj = S.id; saveOpt();
   const saved = load(S.key, s => Array.isArray(s.lv) && s.lv.length === S.max+1);
@@ -170,7 +184,7 @@ const STAR = (cx, cy, r) => `<path d="M${cx} ${cy-r} L${cx+r*.28} ${cy-r*.28} L$
 function monSVG(n, st){
   const c = S.color[n], s = [0,.78,.9,1][st];
   // おなか：1〜10 は点の数、11〜30 と ABC はその文字
-  const dots = !S.dots
+  const dots = !(S.dots && S.dots(n))
     ? `<text x="100" y="163" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="30" fill="${c}">${S.label[n]}</text>`
     : (n <= 5 ? range(0,n-1).map(i => [78 + i*11, 152]) : range(0,n-1).map(i => [78 + (i%5)*11, i<5 ? 146 : 158]))
       .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${c}"/>`).join('');
@@ -204,8 +218,9 @@ const CAPSULE = `<svg viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" 
    なれ度が上がるとモンスターが進化する（進化は下がらない）。 */
 let pendingNew = null, lastT = 0;
 const pool = () => range(1, state.allOpen ? S.max : state.unlocked);
-function pickTarget(){
-  const p = pool().filter(n => n !== lastT);
+// ok：その遊びで出せる番号だけに しぼる（つぎは なに？は 3 から、書く遊びは 字形のある 1〜10 だけ）
+function pickTarget(ok = () => true){
+  const all = pool().filter(ok), p = all.length > 1 ? all.filter(n => n !== lastT) : all;
   const w = p.map(n => (4 - state.lv[n]) ** 2 + (n === state.unlocked && !state.allOpen ? 4 : 0));
   let r = Math.random() * w.reduce((a,b)=>a+b,0), t = p[p.length-1];
   for (let i=0;i<p.length;i++){ r -= w[i]; if (r <= 0){ t = p[i]; break; } }
@@ -257,7 +272,7 @@ function home(){
   stage.innerHTML = `
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
     <div class="path-label">${S.name}の みち</div>
-    <div class="path">${stones}</div>
+    <div class="path${S.max > 13 ? ' many' : ''}">${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
       `<button class="mode${all.length % 2 && i === all.length-1 ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
@@ -269,10 +284,10 @@ function learn(n){ setMode('learn'); cur = n || pendingNew || pool().length; pen
 const markWord = (w, l) => { const i = w.indexOf(l); return i < 0 ? esc(w) : esc(w.slice(0,i)) + `<b>${esc(l)}</b>` + esc(w.slice(i+1)); };
 // みる：教科ごとの カードの中身
 const LEARN_CARD = {
-  num: n => `<button class="bignum" data-n="${n}" aria-label="${YOMI[n]}">${n}</button>
+  num: n => n <= 10 ? `<button class="bignum" data-n="${n}" aria-label="${YOMI[n]}">${n}</button>
        <div class="hint">${n} は ${HINT[n][1]} <span class="em">${HINT[n][0]}</span></div>
-       ${frame(n, pickItem())}`,
-  big: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}"><span class="tens">${S.label[n][0]}</span>${S.label[n][1]}</button>
+       ${frame(n, pickItem())}`
+    : `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}"><span class="tens">${S.label[n][0]}</span>${S.label[n][1]}</button>
        <div class="hint">${S.label[n]} は ${tenHint(S.val(n))}</div>
        ${qty(n, pickItem())}`,
   abc: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
@@ -307,7 +322,7 @@ function bars(v, it){
     : `<span class="cell"></span>`).join('')}</div>`);
   return `<div class="bars">${rows.join('')}</div>`;
 }
-const qty = (n, it) => S.tens ? bars(S.val(n), it) : frame(n, it);
+const qty = (n, it) => S.tens && S.tens(n) ? bars(S.val(n), it) : frame(n, it);
 const tenHint = v => v % 10 ? `<b>${v - v % 10}</b> と <b>${v % 10}</b>` : `<b>10</b> が ${v/10}つ`;
 function countTap(el){
   if (el.classList.contains('tapped')) return sayLine('num', +el.dataset.c);
@@ -328,7 +343,7 @@ function win(n, next, ms){
 }
 function startQuiz(kind){ setMode(kind); newRound(); nextQ(); }
 function nextQ(){
-  const t = pickTarget(); q = {t, miss:0, over:false};
+  const t = pickTarget(mode === 'next' ? n => S.val(n) >= 3 : undefined); q = {t, miss:0, over:false};
   const lab = mode === 'pair' ? S.lower : S.label;
   const btns = makeChoices(t).map(n => `<button class="choice" data-ans="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${lab[n]}</button>`).join('');
   if (mode === 'find'){
@@ -420,7 +435,7 @@ const dist = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
 // なぞりがきは 出ている数字に しばられず、ぜんぶの数字・文字を まぜた山から じゅんばんに出す（1回の中で 同じのは出ない）
 let traceDeck = [];
 function pickTrace(){
-  if (!traceDeck.length) traceDeck = shuffle(range(1, S.max).filter(n => n !== lastT));
+  if (!traceDeck.length) traceDeck = shuffle(range(1, S.max).filter(n => n !== lastT && S.glyph(n)));
   return lastT = traceDeck.pop();
 }
 function trace(){ setMode('trace'); newRound(); traceDeck = []; nextTrace(); }
@@ -529,7 +544,7 @@ function bestShift(tpl, ink){
 }
 function write(){ setMode('write'); newRound(); nextWrite(); }
 function nextWrite(){
-  const t = pickTarget(), g = S.glyph(t), w = g.w || 100, gd = (g.s || g).map(strokePts);
+  const t = pickTarget(n => !!S.glyph(n)), g = S.glyph(t), w = g.w || 100, gd = (g.s || g).map(strokePts);
   q = {t, miss:0, over:false};
   wr = { gd, ink: [], cur: null, gen: 0, len: pathLen(gd) };
   stage.innerHTML = `<div class="card count-card" style="--c:${S.color[t]}">
@@ -811,7 +826,7 @@ function openSheet(){
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>
-    <div class="meter" style="grid-template-columns:repeat(${Math.min(S.max,13)},minmax(0,1fr))">${range(1,S.max).map(n => `<div class="${n>open?'lock':''}" style="--c:${S.color[n]}">
+    <div class="meter" style="grid-template-columns:repeat(${S.max % 10 ? Math.min(S.max, 13) : 10},minmax(0,1fr))">${range(1,S.max).map(n => `<div class="${n>open?'lock':''}" style="--c:${S.color[n]}">
       <span class="bar-v"><i style="height:${state.lv[n]/3*100}%"></i></span>${S.label[n]}</div>`).join('')}</div>
     <div class="legend">出ている${S.unit}：${S.label[1]}〜${S.label[open]}　／　なかま ${caughtCount()}ひき</div>
     <h3>おうちの なかま（すきな画像）</h3>

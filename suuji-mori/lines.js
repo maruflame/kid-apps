@@ -4,7 +4,7 @@
    文を足したり変えたりしたら make-voice.py で音声を作りなおす（どの引数で数えるかは line() の each で決める）。 */
 
 // each：allLines() が 音声を作るときに 何を入れて呼ぶか
-//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'c' 0〜max / 'v' 数 1〜30 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
+//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
@@ -21,19 +21,19 @@ const LINE = {
   pair: line('n', n => [`「${S.label[n]}」の こもじは どれ かな？`, `大文字の${V(n)}。 小文字は、どれかな？`], hasMode('pair')),
   count: line('', nm => nm ? [`${nm}は いくつ いるかな？`, `${nm}は、いくついるかな？ 触って数えてもいいよ`]
     : ['いくつ あるかな？', 'いくつあるかな？ 触って数えてもいいよ']),
-  next: line('n', n => { const v = S.val(n); return [`${v-2}、${v-1}、 つぎは なに？`, `${numYomi(v-2)}、${numYomi(v-1)}、次は何かな？`]; }, hasMode('next')),
+  next: line('n3', n => { const v = S.val(n); return [`${v-2}、${v-1}、 つぎは なに？`, `${numYomi(v-2)}、${numYomi(v-1)}、次は何かな？`]; }, hasMode('next')),
   // せいかい：ふきだしは あそびによって ちがう
   right: line('p', ([p, ps], n, how) => [
     how === 'pair' ? `${p} ${S.label[n]} と ${S.lower[n]}` : how === 'balloon' ? `${p} ${nameOf(n)}を みっけ！` : `${p} ${nameOf(n)}`,
     `${ps} ${V(n)}！`]),
   wrongFind: line('nn', (n, t) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${V(t)}は、どれかな？`]),
   wrongPair: line('nn', (n, t) => [`おしい！ それは ${S.lower[n]}（${S.yomi[n]}）`, `それは${V(n)}。 ${V(t)}の小文字を、探そう`], hasMode('pair')),
-  wrongNext: line('nn', (n, t) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${numYomi(S.val(t)-1)}の次は、何かな？`], hasMode('next')),
+  wrongNext: line('n3', (n, t = n) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${numYomi(S.val(t)-1)}の次は、何かな？`], hasMode('next')),
   wrongCount: line('v', v => ['おしい！ もういちど かぞえよう', `それは${numYomi(v)}。 一緒に数えてみよう`]),
   balloon: line('n', n => [`${S.label[n]} の ふうせんを 3つ わってね`, `${V(n)}の風船を、3つ割ってね`]),
-  trace: line('n', n => [`「${S.yomi[n]}」を なぞろう。みどりの まるから スタート`, `${V(n)}を、なぞってみよう。 緑の丸から、スタート`], hasMode('trace')),
+  trace: line('g', n => [`「${S.yomi[n]}」を なぞろう。みどりの まるから スタート`, `${V(n)}を、なぞってみよう。 緑の丸から、スタート`], hasMode('trace')),
   traceNext: line('', () => ['つぎの せんも なぞってね', '次の線も、なぞってね']),
-  write: line('n', n => [`「${S.yomi[n]}」を かいてみよう。うすい じを みてね`, `${V(n)}を、書いてみよう。 薄い字を、よく見てね`], hasMode('write')),
+  write: line('g', n => [`「${S.yomi[n]}」を かいてみよう。うすい じを みてね`, `${V(n)}を、書いてみよう。 薄い字を、よく見てね`], hasMode('write')),
   writeMore: line('', () => ['おしい！ きいろの ところも かいてね', 'おしい！ 黄色のところも、書いてね'], hasMode('write')),
   writeOff: line('', () => ['はみだしちゃった。もういちど かこう', 'はみ出しちゃったね。 もう一度、書いてみよう'], hasMode('write')),
   is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`]),
@@ -75,7 +75,8 @@ function allLines(){
   for (const s of Object.values(SUBJ)){
     S = s;
     const ns = range(1, s.max);
-    const args = { '': [[]], n: ns.map(n => [n]), nn: ns.map(n => [n, n]), c: range(0, s.max).map(c => [c]),
+    const args = { '': [[]], n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
+      n3: ns.filter(n => s.val && s.val(n) >= 3).map(n => [n]), g: ns.filter(n => s.glyph && s.glyph(n)).map(n => [n]), c: range(0, s.max).map(c => [c]),
       v: range(1, 30).map(v => [v]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]), pic: Object.keys(PICTURES).map(k => [k]) };
     for (const f of Object.values(LINE)){
       if (f.each == null || (f.when && !f.when(s))) continue;
