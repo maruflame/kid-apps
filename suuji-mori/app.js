@@ -1,4 +1,4 @@
-/* すうじのもり：画面と あそび（data.js・lines.js・glyphs.js のあとに読む） */
+/* Meridian：画面と あそび（data.js・lines.js・glyphs.js のあとに読む） */
 (() => {
 const OPTKEY = 'suuji-mori-opt', PICKEY = 'suuji-mori-pics';
 const ROUND = 5, MAXPICS = 12;
