@@ -4,7 +4,7 @@
    文を足したり変えたりしたら make-voice.py で音声を作りなおす（どの引数で数えるかは line() の each で決める）。 */
 
 // each：allLines() が 音声を作るときに 何を入れて呼ぶか
-//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'c' 0〜max / 'v' 数 1〜30 / 'p' ほめ言葉 × 番号 / null 数えない（英語だけ など）
+//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'c' 0〜max / 'v' 数 1〜30 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / null 数えない（英語だけ など）
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
@@ -44,6 +44,11 @@ const LINE = {
   mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monName(n)}。 ${V(n)}の仲間だよ`]),
   word: line(null, n => [null, `«${WORD[n][1]}|${WORD[n][2]}»`]),
   tryIt: line('', () => [null, S.tryIt()]),
+  // ぬりえ
+  nurie: line('', () => ['すきな いろを えらんで、ぬりたい ところを タップしてね', '好きな色を選んで、塗りたいところを、タップしてね']),
+  color: line('color', ([, show, sp]) => [`${show}で ぬろう`, `${sp}で、塗ろう`]),
+  nurieDone: line('', () => ['できた！ すてきな おひめさま！', 'できた！ 素敵な、お姫様！']),
+  nurieReset: line('', () => ['もういちど おすと ぜんぶ けすよ', 'もう一度押すと、全部消すよ']),
 };
 
 // 読み上げ文を かたまりに わける：{ja:'日本語の1文'} か {en:'英語', kana:'カタカナ'}（«英語|カタカナ»）
@@ -67,7 +72,7 @@ function allLines(){
     S = s;
     const ns = range(1, s.max);
     const args = { '': [[]], n: ns.map(n => [n]), nn: ns.map(n => [n, n]), c: range(0, s.max).map(c => [c]),
-      v: range(1, 30).map(v => [v]), p: PRAISE.flatMap(p => ns.map(n => [p, n])) };
+      v: range(1, 30).map(v => [v]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]) };
     for (const f of Object.values(LINE)){
       if (f.each == null || (f.when && !f.when(s))) continue;
       for (const a of args[f.each]) chunks(f(...a)[1]).forEach(c => c.ja && set.add(c.ja));
