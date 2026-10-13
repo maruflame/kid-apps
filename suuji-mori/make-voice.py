@@ -33,7 +33,7 @@ ENGINE = 'http://127.0.0.1:50021'
 BITRATE = 40000  # AAC のビットレート
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SOURCES = [os.path.join(HERE, n) for n in ('data.js', 'lines.js', 'glyphs.js')]
+SOURCES = [os.path.join(HERE, n) for n in ('data.js', 'lines.js', 'glyphs.js', 'nurie.js')]
 OUT = os.path.join(HERE, 'voice')
 CLIPS_JS = os.path.join(OUT, 'clips.js')
 JSC = '/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc'
