@@ -8,6 +8,7 @@
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
+const notAdd = s => s.id !== 'add', isAdd = s => s.id === 'add';
 const nameOf = n => `${S.label[n]}（${S.yomi[n]}）`;
 const monName = n => S.mon[n][0];
 
@@ -17,7 +18,7 @@ const LINE = {
   // num・total・wrongCount は 番号ではなく 数そのもの（0〜30）
   num: line('v', v => [null, numYomi(v)]),
   total: line('v', v => [`ぜんぶで ${v}！`, `全部で、${numYomi(v)}！`]),
-  find: line('n', n => [`「${S.yomi[n]}」は どれ かな？`, `${V(n)}は、どれかな？`]),
+  find: line('n', n => [`「${S.yomi[n]}」は どれ かな？`, `${V(n)}は、どれかな？`], hasMode('find')),
   pair: line('n', n => [`「${S.label[n]}」の こもじは どれ かな？`, `大文字の${V(n)}。 小文字は、どれかな？`], hasMode('pair')),
   count: line('', nm => nm ? [`${nm}は いくつ いるかな？`, `${nm}は、いくついるかな？ 触って数えてもいいよ`]
     : ['いくつ あるかな？', 'いくつあるかな？ 触って数えてもいいよ']),
@@ -25,18 +26,32 @@ const LINE = {
   // せいかい：ふきだしは あそびによって ちがう
   right: line('p', ([p, ps], n, how) => [
     how === 'pair' ? `${p} ${S.label[n]} と ${S.lower[n]}` : how === 'balloon' ? `${p} ${nameOf(n)}を みっけ！` : `${p} ${nameOf(n)}`,
-    `${ps} ${V(n)}！`]),
-  wrongFind: line('nn', (n, t) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${V(t)}は、どれかな？`]),
+    `${ps} ${V(n)}！`], notAdd),
+  wrongFind: line('nn', (n, t) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${V(t)}は、どれかな？`], hasMode('find')),
   wrongPair: line('nn', (n, t) => [`おしい！ それは ${S.lower[n]}（${S.yomi[n]}）`, `それは${V(n)}。 ${V(t)}の小文字を、探そう`], hasMode('pair')),
   wrongNext: line('n3', (n, t = n) => [`おしい！ それは ${nameOf(n)}`, `それは${V(n)}。 ${numYomi(S.val(t)-1)}の次は、何かな？`], hasMode('next')),
   wrongCount: line('v', v => ['おしい！ もういちど かぞえよう', `それは${numYomi(v)}。 一緒に数えてみよう`]),
-  balloon: line('n', n => [`${S.label[n]} の ふうせんを 3つ わってね`, `${V(n)}の風船を、3つ割ってね`]),
+  balloon: line('n', n => [`${S.label[n]} の ふうせんを 3つ わってね`, `${V(n)}の風船を、3つ割ってね`], hasMode('balloon')),
   trace: line('g', n => [`「${S.yomi[n]}」を なぞろう。みどりの まるから スタート`, `${V(n)}を、なぞってみよう。 緑の丸から、スタート`], hasMode('trace')),
   traceNext: line('', () => ['つぎの せんも なぞってね', '次の線も、なぞってね']),
   write: line('g', n => [`「${S.yomi[n]}」を かいてみよう。うすい じを みてね`, `${V(n)}を、書いてみよう。 薄い字を、よく見てね`], hasMode('write')),
   writeMore: line('', () => ['おしい！ きいろの ところも かいてね', 'おしい！ 黄色のところも、書いてね'], hasMode('write')),
   writeOff: line('', () => ['はみだしちゃった。もういちど かこう', 'はみ出しちゃったね。 もう一度、書いてみよう'], hasMode('write')),
-  is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`]),
+  // たしざん（a・b は しきの 2つの数）
+  awase: line('n', n => { const [a, b] = S.fact[n];
+    return [`${a} と ${b}、あわせて いくつ？`, `${YOMI[a]}と${YOMI[b]}、合わせて、いくつかな？ 触って数えてもいいよ`]; }, isAdd),
+  fueru: line('n', n => [`バスに ${S.fact[n][0]}ひき のってるよ`, `バスに、${S.fact[n][0]}匹乗ってるよ`], isAdd),
+  fueruAsk: line('n', n => { const [a, b] = S.fact[n];
+    return [`${b}ひき のってきた！ ぜんぶで なんびき？`, `${b}匹、乗ってきたよ！ 全部で、何匹かな？ ${YOMI[a]}の次から、数えてみよう`]; }, isAdd),
+  ten: line('n', n => { const a = S.fact[n][0];
+    return [`${a} と あと いくつで 10？`, `${YOMI[a]}と、あといくつで、じゅうになるかな？`]; }, isAdd),
+  rightAdd: line('p', ([p, ps], n) => [`${p} ${S.label[n]}=${S.val(n)}`, `${ps} ${V(n)}は、${numYomi(S.val(n))}！`], isAdd),
+  // 10を つくろう は 10 になる しきだけ（a と 10-a）
+  rightTen: line('p', ([p, ps], n) => { const a = S.fact[n][0];
+    return [`${p} ${a} と ${10-a} で 10`, `${ps} ${YOMI[a]}と${YOMI[10-a]}で、じゅう！`]; }, isAdd),
+  wrongAdd: line('v', v => [`おしい！ それは ${v}。もういちど かぞえよう`, `それは${numYomi(v)}。 もう一度、数えてみよう`], isAdd),
+  wrongTen: line('v', v => [`おしい！ あいてる ところを かぞえよう`, `それは${numYomi(v)}。 空いているところを、数えてみよう`], isAdd),
+  is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`], hasMode('balloon')),
   monNew: line('n', n => [`あっ！ ${monName(n)}が でてきた！ カプセルを なげよう`, `あっ！ ${monName(n)}が出てきた！ どんぐりカプセルを、投げよう`]),
   monVisit: line('n', n => [`${monName(n)}が あそびに きたよ！`, `${monName(n)}が、遊びに来たよ！ ${V(n)}の仲間だね`]),
   caught: line('n', n => [`やったー！ ${monName(n)}が なかまに なった！`, `やったー！ ${monName(n)}が、仲間になった！ ${S.belly(n)}`]),

@@ -42,7 +42,7 @@ function useSubj(id){
   state = Object.assign(fresh(), saved);
   delete state.voice;
   pendingNew = null; lastT = 0;
-  if (!S.modes.some(m => m[0] === lastGame)) lastGame = 'find';
+  if (!S.modes.some(m => m[0] === lastGame)) lastGame = hasMode('find')(S) ? 'find' : S.modes[0][0];
 }
 let pics = load(PICKEY, Array.isArray) || [];
 const savePics = () => store(PICKEY, pics);
@@ -219,8 +219,9 @@ const CAPSULE = `<svg viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" 
 let pendingNew = null, lastT = 0;
 const pool = () => range(1, state.allOpen ? S.max : state.unlocked);
 // ok：その遊びで出せる番号だけに しぼる（つぎは なに？は 3 から、書く遊びは 字形のある 1〜10 だけ）
-function pickTarget(ok = () => true){
-  const all = pool().filter(ok), p = all.length > 1 ? all.filter(n => n !== lastT) : all;
+// from：出ている番号の かわりに ここから出す（10を つくろう は 10 になる しき ぜんぶ）
+function pickTarget(ok = () => true, from = pool()){
+  const all = from.filter(ok), p = all.length > 1 ? all.filter(n => n !== lastT) : all;
   const w = p.map(n => (4 - state.lv[n]) ** 2 + (n === state.unlocked && !state.allOpen ? 4 : 0));
   let r = Math.random() * w.reduce((a,b)=>a+b,0), t = p[p.length-1];
   for (let i=0;i<p.length;i++){ r -= w[i]; if (r <= 0){ t = p[i]; break; } }
@@ -245,7 +246,7 @@ function record(n, good){
 const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITEMS);
 
 /* ---------- がめん ---------- */
-const QUIZ = ['find','count','pair','next'], GAMES = [...QUIZ, 'balloon', 'trace', 'write'];
+const QUIZ = ['find','count','pair','next'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
 let round = {done:0, hits:[], evolved:[]};
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -272,9 +273,9 @@ function home(){
   stage.innerHTML = `
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
     <div class="path-label">${S.name}の みち</div>
-    <div class="path${S.max > 13 ? ' many' : ''}">${stones}</div>
+    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
-      `<button class="mode${all.length % 2 && i === all.length-1 ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
+      `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
   tell('home');
 }
@@ -290,6 +291,11 @@ const LEARN_CARD = {
     : `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}"><span class="tens">${S.label[n][0]}</span>${S.label[n][1]}</button>
        <div class="hint">${S.label[n]} は ${tenHint(S.val(n))}</div>
        ${qty(n, pickItem())}`,
+  // たしざん：2つの グループを ぜんぶ かぞえると「?」に こたえが出る
+  add: n => { const [a, b] = S.fact[n];
+    return `<button class="bignum eqbig" data-n="${n}" aria-label="${S.yomi[n]}">${a}+${b}</button>
+       ${groups(a, b, true)}
+       <div class="hint">${a} と ${b} で <b class="q">?</b></div>`; },
   abc: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
        <button class="word" data-word="${n}" aria-label="${esc(WORD[n][1])}"><span class="em">${WORD[n][0]}</span><span>${markWord(WORD[n][1], S.lower[n])}</span></button>`,
 };
@@ -331,13 +337,14 @@ function countTap(el){
   tone(note(counted), 0, .25, 'triangle', .13);
   sayLine('num', counted);
   if (mode === 'learn' && counted === S.val(cur)){
-    later(() => { chime(); burst($('.bignum'), 24); tell('total', counted); }, 650);
+    later(() => { const qm = $('.card .q'); if (qm) qm.textContent = counted;
+      chime(); burst($('.bignum'), 24); tell('total', counted); }, 650);
   }
 }
 
 // せいかい：ほめて 星をふやし、5つ たまったら ごほうび
 function win(n, next, ms){
-  tell('right', pick(PRAISE), n, mode);
+  tell(mode === 'ten' ? 'rightTen' : ADDQ.includes(mode) ? 'rightAdd' : 'right', pick(PRAISE), n, mode);
   round.done++; drawStars();
   later(() => round.done >= ROUND ? reward() : next(), ms);
 }
@@ -380,6 +387,82 @@ function answer(n, el){
     if (mode === 'count') tell('wrongCount', S.val(n));
     else tell({ find: 'wrongFind', pair: 'wrongPair', next: 'wrongNext' }[mode], n, q.t);
     if (q.miss >= 2) stage.querySelector(`[data-ans="${q.t}"]`).classList.add('glow');
+  }
+}
+
+/* ---------- たしざん ----------
+   こたえは しきの番号ではなく 数（1〜10）で えらぶ。なれ度は しきの番号に つける。
+   あわせて：2つの グループが くっつく（合併）。ふえると：バスに あとから のってくる（増加・数えたし）。
+   10を つくろう：10の わくの あいている数（10の 合成）。 */
+// グループの ならべかた：4 は 2×2、5〜9 は 3れつ（サイコロの ように まとまりで 見える）
+const cols = k => k <= 3 ? k : k === 4 ? 2 : 3;
+const grp = (k, it) => `<div class="grp" style="--k:${cols(k)}">${range(1, k).map(() =>
+  `<button class="cell item" aria-label="${faceLabel(it)}">${face(it)}</button>`).join('')}</div>`;
+function groups(a, b, joined){
+  const it = pickItem(), it2 = pick(ITEMS.filter(x => x !== it));
+  return `<div class="groups${joined ? ' joined' : ''}" style="--cols:${cols(a) + cols(b)}">${grp(a, it)}<span class="plus">+</span>${grp(b, it2)}</div>`;
+}
+// こたえの 選択肢：となりの数（±1、±2）を 優先して まぜる
+function numChoices(v, t, hi){
+  const k = [2,3,4,4][state.lv[t]], ok = x => x >= 1 && x <= hi && x !== v;
+  const near = [...shuffle([v-1, v+1]), ...shuffle([v-2, v+2])].filter(ok);
+  const rest = shuffle(range(1, hi).filter(x => ok(x) && !near.includes(x)));
+  return shuffle([v, ...near, ...rest].slice(0, k));
+}
+const TENS = range(1, SUBJ.add.max).filter(n => SUBJ.add.val(n) === 10);
+function startAdd(kind){ setMode(kind); newRound(); nextAdd(); }
+function nextAdd(){
+  const t = pickTarget(undefined, mode === 'ten' ? TENS : pool()), [a, b] = S.fact[t];
+  q = {t, ans: mode === 'ten' ? b : a + b, miss:0, over:false};
+  counted = mode === 'fueru' ? a : 0;
+  const btns = numChoices(q.ans, t, mode === 'ten' ? 9 : 10).map(v =>
+    `<button class="choice" data-ans="${v}" style="--c:${COLOR[v]}" aria-label="${numYomi(v)}">${v}</button>`).join('');
+  if (mode === 'awase'){
+    stage.innerHTML = `<div class="card add-card"><div class="eq">${a} + ${b} = <span class="q">?</span></div>${groups(a, b)}</div>
+      <div class="choices">${btns}</div>`;
+    later(() => { const g = $('.groups'); if (g){ g.classList.add('joined'); tone(523, 0, .12, 'triangle', .1); tone(784, .1, .2, 'triangle', .1); } }, 1300);
+    tell('awase', t);
+  } else if (mode === 'fueru'){
+    // のっている子は さわれない（さいごの子に a の 番号）。のってくる子を さわると a+1 から かぞえる
+    const rider = pick(ANIMALS), comer = pick(ANIMALS.filter(x => x !== rider));
+    const seats = range(0, 9).map(i => i < a ? `<span class="cell item">${rider}${i === a-1 ? `<span class="tag">${a}</span>` : ''}</span>`
+      : i < a + b ? `<button class="cell item come" aria-label="${comer}" disabled><span class="pas">${comer}</span></button>`
+      : `<span class="cell"></span>`).join('');
+    stage.innerHTML = `<div class="card add-card"><div class="eq">${a} + ${b} = <span class="q">?</span></div>
+      <div class="bus"><div class="frame">${seats}</div></div></div><div class="choices" hidden>${btns}</div>`;
+    tell('fueru', t);
+    stage.querySelectorAll('.come').forEach((el, i) => later(() => {
+      const p = el.firstChild, bus = $('.bus').getBoundingClientRect(), r = el.getBoundingClientRect();
+      el.disabled = false; p.style.visibility = 'visible';
+      if (!reduce) p.animate([{transform:`translateX(${bus.right - r.left}px)`}, {transform:'none'}], {duration:700, easing:'cubic-bezier(.3,.7,.4,1)'});
+      tone(note(a + i + 1), .55, .2, 'triangle', .12);
+    }, 1800 + i * 800));
+    later(() => { stage.querySelector('.choices').hidden = false; tell('fueruAsk', t); }, 1800 + b * 800 + 400);
+  } else {
+    // 10の わく：a こ うまっていて、あいている所を さわって かぞえられる
+    const it = pickItem(), cells = range(0, 9).map(i => i < a ? `<span class="cell item">${face(it)}</span>`
+      : `<button class="cell hole" aria-label="あいてる ところ"></button>`).join('');
+    stage.innerHTML = `<div class="card add-card"><div class="eq">${a} + <span class="q">?</span> = 10</div><div class="frame">${cells}</div></div>
+      <div class="choices">${btns}</div>`;
+    tell('ten', t);
+  }
+}
+function answerAdd(v, el){
+  if (q.over) return;
+  if (v === q.ans){
+    q.over = true;
+    el.classList.add('right'); chime(); burst(el);
+    record(q.t, q.miss === 0);
+    stage.querySelectorAll('.choice').forEach(b => b.disabled = true);
+    const qm = $('.eq .q'); qm.textContent = v; qm.classList.add('ok');
+    // 10を つくろう：あいていた所に ほしが はいって 10 に なる
+    stage.querySelectorAll('.hole').forEach((h, i) => { h.disabled = true; later(() => { h.innerHTML = '⭐'; h.classList.add('filled'); tone(note(10 - q.ans + i + 1), 0, .15, 'triangle', .1); }, i * 120); });
+    win(q.t, nextAdd, 2200);
+  } else {
+    q.miss++; boop();
+    el.classList.add('wrong'); el.disabled = true;
+    tell(mode === 'ten' ? 'wrongTen' : 'wrongAdd', v);
+    if (q.miss >= 2) stage.querySelector(`[data-ans="${q.ans}"]`).classList.add('glow');
   }
 }
 
@@ -762,6 +845,7 @@ function resetNurie(btn){
 
 const GO = { home, learn: () => learn(), balloon, trace, write, book, nurie, again: () => GO[lastGame]() };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
+ADDQ.forEach(k => GO[k] = () => startAdd(k));
 
 stage.addEventListener('click', e => {
   const part = mode === 'nurie' && e.target.closest('.part'); if (part) return paint(part);
@@ -774,9 +858,9 @@ stage.addEventListener('click', e => {
   if (el.dataset.learn) return learn(+el.dataset.learn);
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
   if (el.dataset.word){ bounce(el, 1.1); return sayLine('word', +el.dataset.word); }
-  if (el.dataset.ans) return answer(+el.dataset.ans, el);
+  if (el.dataset.ans) return (ADDQ.includes(mode) ? answerAdd : answer)(+el.dataset.ans, el);
   if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : writeClear();
-  if (el.classList.contains('item') || el.classList.contains('tenrow')) return countTap(el);
+  if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
   if (el.id === 'capsule') return throwCapsule();
   if (el.dataset.mon){
@@ -822,11 +906,11 @@ function openSheet(){
   const open = pool().length;
   sheetIn.innerHTML = `
     <h2 id="sheetTitle">おうちのかたへ</h2>
-    <p class="legend">ホーム画面の上で「すうじ」と「ABC」を切りかえられます。記録と仲間はそれぞれ別に残ります。以下は いま選んでいる「${S.name}」についてです。</p>
+    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」を切りかえられます。記録と仲間はそれぞれ別に残ります。以下は いま選んでいる「${S.name}」についてです。</p>
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>
-    <div class="meter" style="grid-template-columns:repeat(${S.max % 10 ? Math.min(S.max, 13) : 10},minmax(0,1fr))">${range(1,S.max).map(n => `<div class="${n>open?'lock':''}" style="--c:${S.color[n]}">
+    <div class="meter" style="grid-template-columns:repeat(${S.cols || (S.max % 10 ? Math.min(S.max, 13) : 10)},minmax(0,1fr))">${range(1,S.max).map(n => `<div class="${n>open?'lock':''}" style="--c:${S.color[n]}">
       <span class="bar-v"><i style="height:${state.lv[n]/3*100}%"></i></span>${S.label[n]}</div>`).join('')}</div>
     <div class="legend">出ている${S.unit}：${S.label[1]}〜${S.label[open]}　／　なかま ${caughtCount()}ひき</div>
     <h3>おうちの なかま（すきな画像）</h3>
