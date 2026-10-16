@@ -4,12 +4,14 @@
    文を足したり変えたりしたら make-voice.py で音声を作りなおす（どの引数で数えるかは line() の each で決める）。 */
 
 // each：allLines() が 音声を作るときに 何を入れて呼ぶか
-//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
+//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'k' ドレミ 1〜7 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
 const notAdd = s => s.id !== 'add', isAdd = s => s.id === 'add';
-const nameOf = n => `${S.label[n]}（${S.yomi[n]}）`;
+const isPitch = s => !!s.pitch;
+// ドレミは 読みと 字が おなじなので（ド）だけ
+const nameOf = n => S.label[n] === S.yomi[n] ? S.label[n] : `${S.label[n]}（${S.yomi[n]}）`;
 const monName = n => S.mon[n][0];
 
 const LINE = {
@@ -51,6 +53,15 @@ const LINE = {
     return [`${p} ${a} と ${10-a} で 10`, `${ps} ${YOMI[a]}と${YOMI[10-a]}で、じゅう！`]; }, isAdd),
   wrongAdd: line('v', v => [`おしい！ それは ${v}。もういちど かぞえよう`, `それは${numYomi(v)}。 もう一度、数えてみよう`], isAdd),
   wrongTen: line('v', v => [`おしい！ あいてる ところを かぞえよう`, `それは${numYomi(v)}。 空いているところを、数えてみよう`], isAdd),
+  // けんばん・おとあて（k は NOTE の音 1〜7）
+  noteName: line('k', k => [null, NOTE[k][0]], isPitch),
+  keyFind: line('n', n => [`「${S.label[n]}」は どこ かな？`, `${V(n)}は、どこかな？ 鍵盤を、タッチしてね`], hasMode('key')),
+  wrongKey: line('nn', (n, t) => [`おしい！ それは ${S.label[n]}`, `それは${V(n)}。 ${V(t)}は、どこかな？`], hasMode('key')),
+  keyBlack: line('', () => ['しろい けんばんを さがしてね', '白い鍵盤を、探してね'], hasMode('key')),
+  keyName: line('', () => ['★の けんばんは なに かな？', '星の鍵盤は、何かな？'], hasMode('name')),
+  wrongName: line('n', n => [`おしい！ ${S.label[n]} は ${NOTE[S.nt(n)][4]}`, `${V(n)}は、${NOTE[S.nt(n)][5]}だよ。 星の鍵盤は、何かな？`], hasMode('name')),
+  ear: line('', () => S.flags ? ['この わおんは なにいろ？', 'この和音は、何色かな？'] : ['この おとは なに かな？', 'この音は、何かな？'], hasMode('ear')),
+  wrongEar: line('n', n => [`${S.label[n]} じゃないよ。もういちど きいてね`, `${V(n)}じゃないよ。 もう一度、聞いてね`], hasMode('ear')),
   is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`], hasMode('balloon')),
   monNew: line('n', n => [`あっ！ ${monName(n)}が でてきた！ カプセルを なげよう`, `あっ！ ${monName(n)}が出てきた！ どんぐりカプセルを、投げよう`]),
   monVisit: line('n', n => [`${monName(n)}が あそびに きたよ！`, `${monName(n)}が、遊びに来たよ！ ${V(n)}の仲間だね`]),
@@ -92,7 +103,7 @@ function allLines(){
     const ns = range(1, s.max);
     const args = { '': [[]], n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
       n3: ns.filter(n => s.val && s.val(n) >= 3).map(n => [n]), g: ns.filter(n => s.glyph && s.glyph(n)).map(n => [n]), c: range(0, s.max).map(c => [c]),
-      v: range(1, 30).map(v => [v]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]), pic: Object.keys(PICTURES).map(k => [k]) };
+      v: range(1, 30).map(v => [v]), k: range(1, 7).map(k => [k]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]), pic: Object.keys(PICTURES).map(k => [k]) };
     for (const f of Object.values(LINE)){
       if (f.each == null || (f.when && !f.when(s))) continue;
       for (const a of args[f.each]) chunks(f(...a)[1]).forEach(c => c.ja && set.add(c.ja));
