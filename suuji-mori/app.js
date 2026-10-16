@@ -168,44 +168,10 @@ function burst(el, n=18){
   }
 }
 
-/* ---------- なかまモンスター（SVGで組み立て） ---------- */
-const mirror = s => s + `<g transform="translate(200 0) scale(-1 1)">${s}</g>`;
-const EARS = {
-  horn:   c => `<path d="M88 72 L100 18 L112 72Z" fill="#FFD54A"/>`,
-  horn2:  c => mirror(`<path d="M70 78 L62 26 L92 66Z" fill="#FFD54A"/>`),
-  bunny:  c => mirror(`<ellipse cx="76" cy="46" rx="14" ry="36" transform="rotate(-14 76 46)" fill="${c}"/><ellipse cx="76" cy="48" rx="6" ry="24" transform="rotate(-14 76 48)" fill="#FFB3C1"/>`),
-  cat:    c => mirror(`<path d="M50 96 L54 30 L98 66Z" fill="${c}"/><path d="M60 82 L62 46 L86 66Z" fill="#FFB3C1"/>`),
-  round:  c => mirror(`<circle cx="56" cy="70" r="24" fill="${c}"/><circle cx="56" cy="70" r="12" fill="#FFB3C1"/>`),
-  antenna:c => mirror(`<path d="M84 68 Q74 42 64 28" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="62" cy="25" r="10" fill="#FFD54A"/>`),
-  leaf:   c => `<path d="M100 66 Q99 46 106 36" stroke="#2C7352" stroke-width="6" fill="none" stroke-linecap="round"/><ellipse cx="122" cy="32" rx="20" ry="11" transform="rotate(-24 122 32)" fill="#5BBF7F"/>`,
-  fin:    c => `<path d="M64 76 Q100 4 136 76Z" fill="#7FD3F0"/>` + mirror(`<path d="M40 128 Q14 112 22 92 Q38 104 46 112Z" fill="#7FD3F0"/>`),
-};
-const STAR = (cx, cy, r) => `<path d="M${cx} ${cy-r} L${cx+r*.28} ${cy-r*.28} L${cx+r} ${cy} L${cx+r*.28} ${cy+r*.28} L${cx} ${cy+r} L${cx-r*.28} ${cy+r*.28} L${cx-r} ${cy} L${cx-r*.28} ${cy-r*.28}Z" fill="#FFD54A"/>`;
-function monSVG(n, st){
-  const c = S.color[n], s = [0,.78,.9,1][st];
-  // おなか：1〜10 は点の数、11〜30 と ABC はその文字
-  const dots = !(S.dots && S.dots(n))
-    ? `<text x="100" y="163" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="30" fill="${c}">${S.label[n]}</text>`
-    : (n <= 5 ? range(0,n-1).map(i => [78 + i*11, 152]) : range(0,n-1).map(i => [78 + (i%5)*11, i<5 ? 146 : 158]))
-      .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${c}"/>`).join('');
-  const eye = `<circle cx="78" cy="108" r="13" fill="#fff"/><circle cx="80" cy="110" r="8" fill="#1F3D35"/><circle cx="83" cy="106" r="3" fill="#fff"/>`;
-  return `<svg class="mon" viewBox="0 0 200 200" aria-hidden="true">
-    <g transform="translate(100 186) scale(${s}) translate(-100 -186)">
-      ${st >= 3 ? mirror(`<ellipse cx="38" cy="104" rx="36" ry="20" transform="rotate(-28 38 104)" fill="#fff" stroke="${c}" stroke-width="3"/>`) : ''}
-      ${EARS[S.mon[n][1]](c)}
-      ${mirror(`<ellipse cx="74" cy="176" rx="17" ry="10" fill="${c}"/>`)}
-      <ellipse cx="100" cy="120" rx="64" ry="58" fill="${c}"/>
-      <ellipse cx="80" cy="84" rx="20" ry="10" fill="#fff" opacity=".22"/>
-      ${mirror(eye)}
-      ${mirror(`<ellipse cx="62" cy="128" rx="9" ry="6" fill="#FF8FA3" opacity=".75"/>`)}
-      <path d="M90 126 Q100 136 110 126" stroke="#1F3D35" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <ellipse cx="100" cy="152" rx="36" ry="20" fill="#fff" opacity=".85"/>
-      ${dots}
-      ${st >= 2 ? STAR(100, 80, 10) : ''}
-    </g>
-    ${st >= 3 ? STAR(26, 40, 12) + STAR(176, 54, 9) + STAR(172, 168, 11) : ''}
-  </svg>`;
-}
+/* ---------- なかまモンスター（え は monsters.js） ---------- */
+// おなか：1〜10 は 点の数、ほかは その数字・文字・しき
+const monSVG = (n, st) => drawMon(S.mon[n][1], S.color[n], st, S.dots && S.dots(n) ? n : S.label[n], S.mon[n][3]);
+const monLabel = n => `${S.mon[n][0]} <small class="en">${S.mon[n][2]}</small>`;
 const stars = st => '★'.repeat(st) + '☆'.repeat(3-st);
 const CAPSULE = `<svg viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="60" rx="34" ry="32" fill="#E7B04A"/><ellipse cx="38" cy="66" rx="8" ry="13" fill="#fff" opacity=".35"/>
   <path d="M14 52 Q14 22 50 22 Q86 22 86 52 Q50 60 14 52Z" fill="#8A5A2B"/><circle cx="34" cy="38" r="3" fill="#6E4520"/><circle cx="50" cy="32" r="3" fill="#6E4520"/><circle cx="66" cy="38" r="3" fill="#6E4520"/><circle cx="42" cy="47" r="3" fill="#6E4520"/><circle cx="58" cy="47" r="3" fill="#6E4520"/>
@@ -248,10 +214,10 @@ const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITE
 /* ---------- がめん ---------- */
 const QUIZ = ['find','count','pair','next'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
-let round = {done:0, hits:[], evolved:[]};
+let round = {done:0, hits:[], evolved:[]}, walkRaf = 0, walkers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 const wait = ms => new Promise(r => later(r, ms));
-function clearTimers(){ timers.forEach(clearTimeout); timers = []; clearInterval(spawnTimer); spawnTimer = null; }
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; clearInterval(spawnTimer); spawnTimer = null; cancelAnimationFrame(walkRaf); walkRaf = 0; }
 function setMode(m){
   clearTimers(); mode = m; token++;
   const game = GAMES.includes(m);
@@ -276,7 +242,8 @@ function home(){
     <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
       `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
-    <button class="book-btn" data-go="book">📖 なかま ずかん <b>${caughtCount()} / ${S.max}</b></button>`;
+    <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
+      <button class="book-btn" data-go="hiroba">🌳 なかまの ひろば</button></div>`;
   tell('home');
 }
 
@@ -723,7 +690,7 @@ function reward(){
   const pic = pics.length ? pick(pics) : null;
   stage.innerHTML = `
     <div class="prize"><div class="rays"></div><div class="monwrap" id="mon">${monSVG(n, state.evo[n])}</div></div>
-    <div class="mon-name" id="monName">${S.mon[n][0]} <span class="st">${stars(state.evo[n])}</span></div>
+    <div class="mon-name" id="monName">${monLabel(n)} <span class="st">${stars(state.evo[n])}</span></div>
     ${isNew ? `<button class="capsule" id="capsule" aria-label="カプセルを なげる">${CAPSULE}タップ！</button>` : ''}
     <div class="after" id="after" hidden>
       ${pic ? `<div class="cheer"><img src="${pic.src}" alt=""><span>${pic.name ? esc(pic.name) + 'も ' : ''}よろこんでるよ！</span></div>` : ''}
@@ -766,7 +733,7 @@ async function afterCatch(){
   for (const e of rw.evolved){
     await wait(2400);
     if (tok !== token) return;
-    const mon = $('#mon'), name = S.mon[e.n][0];
+    const mon = $('#mon'), name = monLabel(e.n);
     mon.getAnimations().forEach(a => a.cancel());
     mon.innerHTML = monSVG(e.n, e.from);
     $('#monName').innerHTML = `${name} <span class="st">${stars(e.from)}</span>`;
@@ -792,8 +759,78 @@ function book(){
     : `<span class="zslot sil">${monSVG(n, 1)}？？？</span>`).join('');
   stage.innerHTML = `<div class="zhead">${S.name}の なかま ずかん　${caughtCount()} / ${S.max}</div><div class="zukan">${slots}</div>
     ${pics.length ? `<div class="zhead">おうちの なかま</div><div class="homepics">${pics.map(p => `<button data-pic="${p.id}"><img src="${p.src}" alt="">${esc(p.name)}</button>`).join('')}</div>` : ''}
-    <div class="row"><button class="pill" data-go="${lastGame}">あそぶ</button></div>`;
+    <div class="row"><button class="pill" data-go="${lastGame}">あそぶ</button><button class="pill alt" data-go="hiroba">🌳 ひろば</button></div>`;
   tell('book', caughtCount());
+}
+
+/* ---------- なかまの ひろば ----------
+   なかまに なった モンスターが 森の ひろばを あるきまわる。さわると ぴょんと はねて 名前を いう。
+   いちは ひろばの 地面の なかの わりあい（0〜1）。奥（上）ほど 小さく、手前ほど 前に かさなる。 */
+function hiroba(){
+  setMode('hiroba');
+  const ns = range(1, S.max).filter(n => state.caught[n]);
+  stage.innerHTML = `<div class="park" style="--size:${ns.length > 24 ? 70 : ns.length > 10 ? 88 : 104}px">
+      <div class="park-sky" aria-hidden="true"><span class="sun"></span><span class="cloud c1"></span><span class="cloud c2"></span></div>
+      <div class="park-trees" aria-hidden="true">${['🌳','🌲','🌳','🌲','🌳','🌲','🌳'].map(t => `<span>${t}</span>`).join('')}</div>
+      <div class="park-ground" id="ground">
+        ${['🌼','🌷','🍄','🌸','🌼','🌱'].map((f, i) => `<span class="flower" style="left:${8 + i * 16}%;top:${[20,70,40,85,55,10][i]}%" aria-hidden="true">${f}</span>`).join('')}
+        ${ns.map(n => `<button class="walker" data-hi="${n}" aria-label="${esc(S.mon[n][0])}"><span class="wflip"><span class="wbody">${monSVG(n, state.evo[n])}</span></span></button>`).join('')}
+      </div>
+    </div>
+    ${ns.length ? '' : `<div class="row"><button class="pill" data-go="${lastGame}">あそぶ</button></div>`}`;
+  tell('hiroba', ns.length);
+  startWalk();
+}
+function startWalk(){
+  const ground = $('#ground'), rnd = () => .05 + Math.random() * .9;
+  walkers = [...ground.querySelectorAll('.walker')].map(el => ({ el, size: el.offsetWidth, x: rnd(), y: rnd(), tx: 0, ty: 0, wait: Math.random() * 2, dir: 1, busy: 0 }));
+  walkers.forEach(w => { w.tx = w.x; w.ty = w.y; place(w, ground.clientWidth, ground.clientHeight); });
+  if (reduce) return;
+  let last = performance.now();
+  const step = now => {
+    const dt = Math.min(.05, (now - last) / 1000), W = ground.clientWidth, H = ground.clientHeight;
+    last = now;
+    for (const w of walkers){
+      if (w.busy > 0){ w.busy -= dt; continue; }
+      const dx = (w.tx - w.x) * W, dy = (w.ty - w.y) * H, dist = Math.hypot(dx, dy);
+      if (w.wait > 0){ w.wait -= dt; continue; }
+      if (dist < 2){
+        // ついたら ひとやすみ。ときどき その場で ぴょん
+        w.el.classList.remove('walking'); w.wait = 1 + Math.random() * 3;
+        w.tx = Math.max(.03, Math.min(.97, w.x + (Math.random() - .5) * .6)); w.ty = Math.max(.03, Math.min(.97, w.y + (Math.random() - .5) * .5));
+        if (Math.random() < .25) hop(w, .6);
+        continue;
+      }
+      const v = Math.min(dist, 46 * dt);
+      w.x += dx / dist * v / W; w.y += dy / dist * v / H;
+      if (Math.abs(dx) > 4) w.dir = dx < 0 ? -1 : 1;
+      w.el.classList.add('walking');
+      place(w, W, H);
+    }
+    walkRaf = requestAnimationFrame(step);
+  };
+  walkRaf = requestAnimationFrame(step);
+}
+// 奥（y=0）は 0.75倍、手前（y=1）は 1.05倍
+function place(w, W, H){
+  const k = .75 + w.y * .3;
+  w.el.style.transform = `translate(${(w.x * (W - w.size)).toFixed(1)}px,${(w.y * (H - w.size)).toFixed(1)}px) scale(${k.toFixed(3)})`;
+  w.el.style.zIndex = 10 + Math.round(w.y * 100);
+  w.el.firstElementChild.style.transform = `scaleX(${w.dir})`;
+}
+function hop(w, big = 1){
+  w.busy = .7;
+  w.el.classList.remove('walking');
+  w.el.querySelector('.wbody').animate([{transform:'translateY(0) scale(1,1)'},{transform:'translateY(4%) scale(1.08,.9)', offset:.15},
+    {transform:`translateY(${-42 * big}%) scale(.94,1.08)`, offset:.5},{transform:'translateY(0) scale(1.08,.92)', offset:.85},{transform:'translateY(0) scale(1,1)'}],
+    {duration: 650, easing:'ease-out'});
+}
+function tapWalker(el){
+  const n = +el.dataset.hi, w = walkers.find(x => x.el === el);
+  if (w) hop(w); else bounce(el);
+  tone(note(n), 0, .3, 'triangle', .14); tone(note(n) * 1.5, .12, .25, 'triangle', .1);
+  burst(el, 10);
+  tell('mon', n);
 }
 
 /* ---------- ぬりえ ----------
@@ -843,7 +880,7 @@ function resetNurie(btn){
   nu[pic] = {}; store(NURIEKEY, nu); boop(); openPic(pic);
 }
 
-const GO = { home, learn: () => learn(), balloon, trace, write, book, nurie, again: () => GO[lastGame]() };
+const GO = { home, learn: () => learn(), balloon, trace, write, book, hiroba, nurie, again: () => GO[lastGame]() };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 ADDQ.forEach(k => GO[k] = () => startAdd(k));
 
@@ -863,6 +900,7 @@ stage.addEventListener('click', e => {
   if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
   if (el.id === 'capsule') return throwCapsule();
+  if (el.dataset.hi) return tapWalker(el);
   if (el.dataset.mon){
     const n = +el.dataset.mon;
     el.animate([{transform:'translateY(0)'},{transform:'translateY(-10px)'},{transform:'translateY(0)'}],{duration:350});

@@ -10,9 +10,6 @@ const HINT = {1:['✏️','えんぴつ','鉛筆'],2:['🦢','はくちょう','
   6:['🍒','さくらんぼ','さくらんぼ'],7:['🪃','ブーメラン','ブーメラン'],8:['⛄','ゆきだるま','雪だるま'],9:['🎈','ふうせん','風船'],10:['✏️🥚','えんぴつと たまご','鉛筆と卵']};
 // 数字ごとに色を固定して、色でも思い出せるようにする
 const COLOR = {1:'#E5484D',2:'#F07C2A',3:'#D99A00',4:'#3E9B6F',5:'#2E8FD0',6:'#7A5AE0',7:'#D9468F',8:'#14998F',9:'#C7662B',10:'#B83A4B'};
-// なかまモンスター：なまえは数字の読みではじまり、おなかの点の数がその数字
-const MON = {1:['いっかくん','horn'],2:['にこりん','bunny'],3:['さんぽっぽ','leaf'],4:['よんにゃん','cat'],5:['ごろくま','round'],
-  6:['ろっくー','antenna'],7:['ななひれ','fin'],8:['はちぴょん','bunny'],9:['きゅうにゃ','cat'],10:['じゅうりゅう','horn2']};
 // ABC：読みは英語の声で。単語と絵で「その文字が入ったことば」を覚える
 const LET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const KANA = ['','エー','ビー','シー','ディー','イー','エフ','ジー','エイチ','アイ','ジェー','ケー','エル','エム','エヌ','オー','ピー','キュー','アール','エス','ティー','ユー','ブイ','ダブリュー','エックス','ワイ','ズィー'];
@@ -21,8 +18,32 @@ const WORD = [null,['🍎','apple','アップル'],['🐻','bear','ベアー'],[
   ['🪁','kite','カイト'],['🦁','lion','ライオン'],['🐵','monkey','モンキー'],['👃','nose','ノーズ'],['🐙','octopus','オクトパス'],
   ['🐼','panda','パンダ'],['👑','queen','クイーン'],['🐰','rabbit','ラビット'],['☀️','sun','サン'],['🐯','tiger','タイガー'],
   ['☂️','umbrella','アンブレラ'],['🎻','violin','バイオリン'],['🍉','watermelon','ウォーターメロン'],['🦊','fox','フォックス'],['🪀','yo-yo','ヨーヨー'],['🦓','zebra','ゼブラ']];
-const SUFFIX = ['りん','ぴょん','まる','にゃん','ぽん','すけ','ちゃん'];
-const EARTYPES = ['horn','bunny','cat','round','antenna','leaf','fin','horn2'];
+// なかまモンスター：しゅるい → [なまえ（カタカナ。ずんだもんが読む）, えいご]。え は monsters.js
+const KIND = {
+  alpaca:['アルパカ','Alpaca'], bear:['ベア','Bear'], cat:['キャット','Cat'], dog:['ドッグ','Dog'], elephant:['エレファント','Elephant'],
+  fox:['フォックス','Fox'], giraffe:['ジラフ','Giraffe'], hippo:['ヒッポ','Hippo'], iguana:['イグアナ','Iguana'], jellyfish:['ジェリーフィッシュ','Jellyfish'],
+  koala:['コアラ','Koala'], lion:['ライオン','Lion'], mouse:['マウス','Mouse'], narwhal:['ナーワル','Narwhal'], owl:['アウル','Owl'],
+  penguin:['ペンギン','Penguin'], quokka:['クオッカ','Quokka'], rabbit:['ラビット','Rabbit'], sheep:['シープ','Sheep'], tiger:['タイガー','Tiger'],
+  unicorn:['ユニコーン','Unicorn'], van:['バン','Van'], whale:['ホエール','Whale'], xrayfish:['エックスレイ','X-ray fish'], yak:['ヤク','Yak'], zebra:['ゼブラ','Zebra'],
+  chicky:['チッキー','Chicky'], froggy:['フロッギー','Froggy'], piggy:['ピギー','Piggy'], ducky:['ダッキー','Ducky'], panda:['パンダ','Panda'],
+  monkey:['モンキー','Monkey'], ladybug:['レディバグ','Ladybug'], octopus:['オクトパス','Octopus'], turtle:['タートル','Turtle'], hamster:['ハムスター','Hamster'],
+  bee:['ビー','Bee'], crab:['クラブ','Crab'], snail:['スネイル','Snail'], hedgehog:['ヘッジホッグ','Hedgehog'], squirrel:['スクワール','Squirrel'],
+  deer:['ディア','Deer'], raccoon:['ラクーン','Raccoon'], seal:['シール','Seal'], dolphin:['ドルフィン','Dolphin'], shark:['シャーク','Shark'],
+  butterfly:['バタフライ','Butterfly'], dragon:['ドラゴン','Dragon'], dino:['ダイノ','Dino'], robot:['ロボット','Robot'], ghost:['ゴースト','Ghost'],
+  apple:['アップル','Apple'], cupcake:['カップケーキ','Cupcake'], pudding:['プディング','Pudding'], sunny:['サニー','Sunny'], rocket:['ロケット','Rocket']};
+// ABC は その文字で はじまる どうぶつ（B は Bear）
+const ABC_MON = [null,'alpaca','bear','cat','dog','elephant','fox','giraffe','hippo','iguana','jellyfish','koala','lion','mouse','narwhal','owl',
+  'penguin','quokka','rabbit','sheep','tiger','unicorn','van','whale','xrayfish','yak','zebra'];
+// すうじ は ABC と かぶらない どうぶつ と みぢかな もの（8 は あしが 8ぽんの オクトパス）
+const NUM_MON = [null,'chicky','froggy','piggy','ducky','panda','monkey','ladybug','octopus','turtle','hamster',
+  'bee','crab','snail','hedgehog','squirrel','deer','raccoon','seal','dolphin','shark',
+  'butterfly','dragon','dino','robot','ghost','apple','cupcake','pudding','sunny','rocket'];
+// たしざん は こたえが おなじ しきが おなじ どうぶつの かぞく（こたえ 5 は ぜんぶ ベア）。2ひきめ からは かざりで 見分ける
+const ADD_MON = {2:'chicky',3:'piggy',4:'froggy',5:'bear',6:'rabbit',7:'cat',8:'octopus',9:'penguin',10:'lion'};
+const ADD_ACC = [null,['ribbon','リボン','Ribbon'],['hat','ハット','Hat'],['sunglasses','サングラス','Sunglasses'],['flower','フラワー','Flower'],
+  ['cap','キャップ','Cap'],['cape','ケープ','Cape'],['balloon','バルーン','Balloon'],['headphones','ヘッドホン','Headphones']];
+// S.mon[n] = [なまえ, しゅるい, えいご, かざり]
+const monOf = (kind, acc) => { const [ja, en] = KIND[kind]; return acc ? [acc[1] + ja, kind, acc[2] + ' ' + en, acc[0]] : [ja, kind, en]; };
 const PAL = Object.values(COLOR);
 const ITEMS = ['🍎','🍓','🐟','🐥','🚗','⭐','🍩','🐞','🌸','🐸'];
 const BALLOON = ['#E5484D','#2E8FD0','#7A5AE0','#14998F','#D9468F','#E06A1B'];
@@ -56,8 +77,7 @@ const SUBJ = {
     label: range(0,30).map(String), yomi: range(0,30).map(numYomi), val: n => n,
     // 色は一の位の色（1〜10 は数字ごと）。13 と 23 は同じ色なので、十の位を見る練習になる
     color: range(0,30).map(n => COLOR[n % 10 || 10]),
-    // なかまモンスター：1〜10 は きまった名前、11〜30 は 数の読み＋ことば（まえの「11〜30」と同じ）
-    mon: range(0,30).map(n => n <= 10 ? MON[n] : [numYomi(n) + SUFFIX[(n-10) % SUFFIX.length], EARTYPES[(n-7) % EARTYPES.length]]),
+    mon: NUM_MON.map(k => k && monOf(k)),
     v: n => numYomi(n),
     glyph: n => GL_NUM[n],  // なぞりがき・かいてみよう は 1〜10 だけ
     dots: n => n <= 10,     // モンスターのおなかは 1〜10 は点の数、11〜 はその数字
@@ -81,7 +101,8 @@ const SUBJ = {
       '11〜30 は「10のたば」で数をあらわします。10そろった列は1回タップで「じゅう」、のこりは1つずつ数えます。「13 は 10 と 3」という見方が身につきます。',
       '数字の色は一の位の色で、11〜30 の十の位は緑です。13 と 23 は同じ色なので、十の位をよく見る練習になります。11〜30 の選択肢には 13 と 14、13 と 23、12 と 21 のような、まちがえやすい数をわざと混ぜます。',
       '「つぎは なに？」は「4、5」のつぎを選ぶ、数の並びの練習です（3 から）。',
-      '5問クリアで、その回に正解した数字のモンスターが1ぴき仲間になります。1〜10 はおなかの点の数、11〜30 はおなかの数字がその数です。',
+      '5問クリアで、その回に正解した数字のモンスターが1ぴき仲間になります。1〜10 はおなかの点の数、11〜30 はおなかの数字がその数です。モンスターは どうぶつ や 身近なもので、名前は英語です（8 は 足が8本の オクトパス）。',
+      '仲間は ホームの「なかまの ひろば」で 森を歩きまわります。さわると はねて 名前を言います。',
       'なれ度2で1回、なれ度3でもう1回進化します。進化は下がりません。',
       '「なぞりがき」は学校で習う書き順（4 と 5 は2画）で、緑の丸から指でなぞります。出ている数字に関係なく 1〜10 のどれかがランダムに出ます。なれ度には数えませんが、5回で仲間がふえます。',
       '「かいてみよう」は うすい手本を見ながら 1〜10 を自分で書きます。手本の線をほぼ全部通り、はみ出しが少なければ、指をはなして少しすると自動で「正解」になります。書き順と向きは見ません。',
@@ -89,7 +110,7 @@ const SUBJ = {
   abc: { id:'abc', key:'suuji-mori-abc-v1', max:26, name:'もじ', unit:'文字', tab:'🔤 ABC',
     label: [...LET], lower: [...LET.toLowerCase()], yomi: KANA,
     color: range(0,26).map(n => PAL[(n+9)%10]),
-    mon: range(0,26).map(n => [KANA[n] + SUFFIX[n % SUFFIX.length], EARTYPES[n % EARTYPES.length]]),
+    mon: ABC_MON.map(k => k && monOf(k)),
     v: n => `«${LET[n]}|${KANA[n]}»`,
     glyph: n => GL_ABC[LET[n]],
     belly: n => `お腹に、«${LET[n]}|${KANA[n]}»が書いてあるよ`,
@@ -102,7 +123,7 @@ const SUBJ = {
       '文字の読みは英語の声で読み上げます（英語の声が入っていない端末では「エー」「ビー」とカタカナ読み）。',
       '「みる・きく」では大文字と小文字をならべ、その文字が入った単語と絵（A は apple 🍎）をタップで聞けます。',
       '「こもじ ペア」は大文字に合う小文字をえらびます。色で答えがわからないよう、問題の文字は黒で出します。',
-      '苦手な文字ほど多く出題、2択→3択→4択、まちがえても減点なし、5問クリアで仲間がふえる、のは数字と同じです。モンスターのおなかにはその文字が書いてあります。',
+      '苦手な文字ほど多く出題、2択→3択→4択、まちがえても減点なし、5問クリアで仲間がふえる、のは数字と同じです。モンスターのおなかにはその文字が書いてあります。モンスターは その文字で はじまる どうぶつです（B は Bear、Z は Zebra）。',
       '「なぞりがき」は大文字を書き順どおりに、緑の丸から指でなぞります（小文字はまだありません）。出ている文字に関係なく A〜Z のどれかがランダムに出ます。なれ度には数えませんが、5回で仲間がふえます。',
       '「かいてみよう」は うすい手本を見ながら 大文字を自分で書き、書けたかを自動で判定します（書き順と向きは見ません）。'] },
   // たしざん：番号 = FACT の しき。こたえ（val）は 2〜10。色は こたえの数字の色
@@ -112,8 +133,9 @@ const SUBJ = {
     yomi: FACT.map(f => f ? `${YOMI[f[0]]}たす${YOMI[f[1]]}` : ''),
     val: n => FACT[n][0] + FACT[n][1],
     color: FACT.map(f => f ? COLOR[f[0] + f[1]] : ''),
-    // なかまモンスター：なまえは しきの読み（2+3 は「にさん…」）、おなかには その しき
-    mon: FACT.map((f, n) => f ? [YOMI[f[0]] + YOMI[f[1]] + SUFFIX[n % SUFFIX.length], EARTYPES[n % EARTYPES.length]] : ['', 'horn']),
+    // なかまモンスター：こたえごとの かぞく。おなじ こたえの なかで 何ばんめの しきか で かざりが きまる。おなかには その しき
+    mon: FACT.map((f, n) => { if (!f) return null; const v = f[0] + f[1];
+      return monOf(ADD_MON[v], ADD_ACC[FACT.slice(1, n).filter(g => g[0] + g[1] === v).length]); }),
     v: n => `${YOMI[FACT[n][0]]}たす${YOMI[FACT[n][1]]}`,
     belly: n => `お腹に、${V(n)}が書いてあるよ`,
     learn: n => { const [a, b] = FACT[n];
@@ -127,6 +149,7 @@ const SUBJ = {
       '「ふえると いくつ？」は バスに のっている どうぶつに、あとから のってくる「増加」の場面です。はじめに のっている数から つづきを数える「数えたし」（3 → 4、5）の練習になります。バスの座席は 10 の わくと同じ 5×2 です。',
       '「10を つくろう」は 10 の わくの あいている所を見て「7 と あと いくつで 10？」を答えます。10 の合成・分解は、小学校で習う くり上がり（さくらんぼ計算）の土台です。出ている式に関係なく、10 になる 9 つの式から出します。',
       '苦手な式ほど多く出題、2択→3択→4択、まちがえても減点なし（2回まちがえると正解が光る）、5問クリアで仲間がふえる、のは数字と同じです。モンスターのおなかには その式が書いてあります。',
+      'こたえが同じ式のモンスターは 同じ どうぶつの家族です（こたえ 5 の 1+4・2+3・3+2・4+1 は ぜんぶ ベア）。リボン・ハットなどの かざりで 見分けます。ちがう式でも 同じ数になる ことに 気づくきっかけになります。',
       'ホームの式の石をタップすると、その式を 絵で数えるページが開きます。'] },
 };
 let S = SUBJ.num;
