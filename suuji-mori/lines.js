@@ -13,6 +13,8 @@ const isPitch = s => !!s.pitch;
 // ドレミは 読みと 字が おなじなので（ド）だけ
 const nameOf = n => S.label[n] === S.yomi[n] ? S.label[n] : `${S.label[n]}（${S.yomi[n]}）`;
 const monName = n => S.mon[n][0];
+// 読み上げでは なまえを 英語の声で（英語の声がなければ カタカナを 日本語の声で）
+const monSay = n => `«${S.mon[n][2]}|${S.mon[n][0]}»`;
 
 const LINE = {
   home: line('', () => ['なにして あそぶ？ 5もん クリアで なかまが ふえるよ', '何して遊ぶ？ 5問クリアで、仲間が増えるよ']),
@@ -63,16 +65,16 @@ const LINE = {
   ear: line('', () => S.flags ? ['この わおんは なにいろ？', 'この和音は、何色かな？'] : ['この おとは なに かな？', 'この音は、何かな？'], hasMode('ear')),
   wrongEar: line('n', n => [`${S.label[n]} じゃないよ。もういちど きいてね`, `${V(n)}じゃないよ。 もう一度、聞いてね`], hasMode('ear')),
   is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`], hasMode('balloon')),
-  monNew: line('n', n => [`あっ！ ${monName(n)}が でてきた！ カプセルを なげよう`, `あっ！ ${monName(n)}が出てきた！ どんぐりカプセルを、投げよう`]),
-  monVisit: line('n', n => [`${monName(n)}が あそびに きたよ！`, `${monName(n)}が、遊びに来たよ！ ${V(n)}の仲間だね`]),
-  caught: line('n', n => [`やったー！ ${monName(n)}が なかまに なった！`, `やったー！ ${monName(n)}が、仲間になった！ ${S.belly(n)}`]),
-  glow: line('n', n => [`あれ？ ${monName(n)}が ひかってる…！`, `あれ？ ${monName(n)}が、光ってる！`]),
-  evolved: line('n', n => [`${monName(n)}が しんかした！`, `${monName(n)}が、進化した！ ${V(n)}が、得意になったね`]),
+  monNew: line('n', n => [`あっ！ ${monName(n)}が でてきた！ カプセルを なげよう`, `あっ！ ${monSay(n)}が出てきた！ どんぐりカプセルを、投げよう`]),
+  monVisit: line('n', n => [`${monName(n)}が あそびに きたよ！`, `${monSay(n)}が、遊びに来たよ！ ${V(n)}の仲間だね`]),
+  caught: line('n', n => [`やったー！ ${monName(n)}が なかまに なった！`, `やったー！ ${monSay(n)}が、仲間になった！ ${S.belly(n)}`]),
+  glow: line('n', n => [`あれ？ ${monName(n)}が ひかってる…！`, `あれ？ ${monSay(n)}が、光ってる！`]),
+  evolved: line('n', n => [`${monName(n)}が しんかした！`, `${monSay(n)}が、進化した！ ${V(n)}が、得意になったね`]),
   newOne: line('n', n => [`あたらしい ${S.name} ${S.label[n]} が でてきたよ`, `新しい${S.unit}、${V(n)}が出てきたよ`]),
   book: line('c', c => [c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ', c ? `仲間が${c}匹いるよ。 触ってみてね` : '遊ぶと仲間が増えるよ']),
   hiroba: line('c', c => [c ? `なかまが ${c}ひき あそんでるよ。さわってみてね` : 'まだ なかまが いないよ。あそぶと なかまが ふえるよ',
     c ? `仲間が${c}匹、遊んでるよ。 触ってみてね` : 'まだ仲間がいないよ。 遊ぶと、仲間が増えるよ']),
-  mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monName(n)}。 ${V(n)}の仲間だよ`]),
+  mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monSay(n)}。 ${V(n)}の仲間だよ`]),
   word: line(null, n => [null, `«${WORD[n][1]}|${WORD[n][2]}»`]),
   tryIt: line('', () => [null, S.tryIt()]),
   // ぬりえ
