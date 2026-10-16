@@ -309,7 +309,7 @@ function mouth(kind, y){
 function belly(v, c, by, plate){
   const bg = plate ? `<rect x="64" y="${by-17}" width="72" height="34" rx="9" fill="${WHITE}" stroke="${MK}" stroke-opacity=".15" stroke-width="2"/>`
     : `<ellipse cx="100" cy="${by}" rx="34" ry="18" fill="${WHITE}" opacity=".88"/>`;
-  if (typeof v !== 'number') return bg + `<text x="100" y="${by+10}" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="${Math.min(28, 72 / String(v).length).toFixed(1)}" fill="${c}">${v}</text>`;
+  if (typeof v !== 'number') return bg + `<text x="100" y="${by+10}" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="${Math.min(28, 72 / String(v).length).toFixed(1)}" fill="${dk(c, .25)}">${v}</text>`;
   const pts = v <= 5 ? range(0, v-1).map(i => [78 + i*11, by]) : range(0, v-1).map(i => [78 + (i%5)*11, i < 5 ? by-6 : by+6]);
   return bg + pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${c}"/>`).join('');
 }
