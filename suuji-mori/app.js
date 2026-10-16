@@ -19,7 +19,7 @@ const savedOpt = load(OPTKEY, () => true);
 if (savedOpt) Object.assign(opt, savedOpt);
 else if (load(SUBJ.num.key, old => old.voice === false)) opt.voice = false;  // むかしは 声の設定を 記録といっしょに保存していた
 const saveOpt = () => store(OPTKEY, opt);
-const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), caught: {}, unlocked: 3, allOpen: false });
+const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), caught: {}, unlocked: S.start || 3, allOpen: false });
 let state;
 const save = () => store(S.key, state);
 // むかしの「1〜10」と「11〜30」の記録を、1〜30 の記録に まとめる（まだ無いときに いちどだけ。むかしの記録は消さない）
@@ -87,16 +87,18 @@ function stopVoice(){
   if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch(e) {}
 }
 // かたまりを じゅんばんに：日本語は 音声ファイル → なければ ブラウザの声、英語は ブラウザの英語の声
-function say(t){
+// done：読みおわったら よぶ（とちゅうで ほかの文に かわったら よばない）
+function say(t, done){
   lastSpoken = t;
-  if (!opt.voice) return;
+  if (!opt.voice) return done && done();
   stopVoice();
   const gen = sayGen, alive = () => gen === sayGen, steps = chunks(t);
   const clip = c => c.ja && useClips() && CLIPS.has(clipId(c.ja));
   // つぎの音声を先に読みこんでおくと つなぎめの間が短くなる
   if (/^https?:/.test(location.protocol)) steps.filter(clip).forEach(c => fetch(clipUrl(c)).catch(() => {}));
   const run = i => {
-    if (!alive() || i >= steps.length) return;
+    if (!alive()) return;
+    if (i >= steps.length) return done && done();
     const c = steps[i], next = () => run(i + 1);
     clip(c) ? playClip(c, next, alive) : speak(c, next, alive);
   };
@@ -127,15 +129,38 @@ function speak(c, done, alive){
   } catch(e) { done(); }
 }
 let ac;
+const audio = () => { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state !== 'running') ac.resume(); return ac; };
+// iPhone：タップの中で 音を 起こしておく（あとから 鳴らす ピアノの音のため）。消音スイッチでも 鳴るように
+document.addEventListener('pointerdown', () => { try { audio(); } catch(e) {} }, { capture: true });
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e) {}
+// おとあて では 効果音の高さを 1もんごとに ずらす（きまった高さの音が 答えの手がかりに ならないように）
+let sfxShift = 1;
+const reshift = () => { sfxShift = S.ear ? 2 ** ((Math.floor(Math.random() * 13) - 6) / 12) : 1; };
 function tone(f, at=0, dur=.22, type='sine', vol=.16){
   if (!opt.voice) return;
   try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === 'suspended') ac.resume();
+    audio(); f *= sfxShift;
     const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t);
     g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+.02); g.gain.exponentialRampToValueAtTime(.0001, t+dur);
     o.connect(g).connect(ac.destination); o.start(t); o.stop(t+dur+.05);
+  } catch(e) {}
+}
+// ピアノの おと：倍音を かさねて、高い倍音ほど はやく 小さくなる。高さは 本当の高さ（MIDI 69 = ラ = 440Hz）
+function piano(m, at = 0, dur = 1.8, vol = .2){
+  if (!opt.voice) return;
+  try {
+    audio();
+    const f = 440 * 2 ** ((m - 69) / 12), t = ac.currentTime + at, out = ac.createGain();
+    out.gain.setValueAtTime(.0001, t); out.gain.exponentialRampToValueAtTime(vol, t + .006);
+    out.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    out.connect(ac.destination);
+    [[1,1],[2,.55],[3,.3],[4,.16],[5,.08],[6,.05]].forEach(([h, v]) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = f * h;
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(v * .01, t + dur / (1 + h * .5));
+      o.connect(g).connect(out); o.start(t); o.stop(t + dur + .05);
+    });
   } catch(e) {}
 }
 const NOTES = [523,587,659,784,880,1047,1175,1319,1568,1760];
@@ -146,13 +171,20 @@ const popSnd = () => { tone(1200,0,.05,'square',.06); tone(600,.03,.08,'triangle
 const fanfare = () => [523,659,784,1047,784,1047].forEach((f,i)=>tone(f,i*.12,.28,'triangle',.14));
 const sparkle = () => [1319,1568,1760,2093,1760,2093,2637].forEach((f,i)=>tone(f,i*.07,.18,'sine',.1));
 
-function guide(text, speak){ bubble.textContent = text; say(speak || text); }
-// LINE の文を ふきだしに出して 読む／読むだけ
+function guide(text, speak, done){ bubble.textContent = text; say(speak || text, done); }
+// LINE の文を ふきだしに出して 読む／読むだけ／読んでから done
 const tell = (key, ...a) => guide(...LINE[key](...a));
+const tellThen = (done, key, ...a) => guide(...LINE[key](...a), done);
 const sayLine = (key, ...a) => say(LINE[key](...a)[1]);
 const bounce = (el, s = 1.15) => el.animate([{transform:'scale(1)'},{transform:`scale(${s})`},{transform:'scale(1)'}], {duration:350});
-// タップした数字・文字を 読んで 音を鳴らす
-const tapSay = (el, text, n) => { say(text); tone(note(n), 0, .3, 'triangle', .14); bounce(el); };
+// その番号の音：ドレミの教科は ピアノの音（わおんは 和音を いっしょに）、ほかは 番号ごとの音
+const playN = n => { const ms = S.midis(n); ms.forEach(m => piano(m, 0, 2, .2 / Math.sqrt(ms.length))); };
+const ding = n => S.pitch ? playN(n) : tone(note(n), 0, .3, 'triangle', .14);
+// わおん の 旗
+const flagSVG = c => `<svg class="flagsvg" viewBox="0 0 60 60" aria-hidden="true"><rect x="9" y="5" width="4" height="52" rx="2" fill="#8A6A4A"/>
+  <path d="M13 8 Q30 1 52 10 L52 34 Q32 27 13 34Z" fill="${c}" stroke="rgba(31,61,53,.25)" stroke-width="1.5"/></svg>`;
+// タップした数字・文字を 読んで 音を鳴らす（ドレミは 音を きいてから 名前）
+const tapSay = (el, text, n) => { ding(n); bounce(el); S.pitch ? later(() => say(text), 450) : say(text); };
 
 function burst(el, n=18){
   if (reduce || !el) return;
@@ -195,6 +227,7 @@ function pickTarget(ok = () => true, from = pool()){
 }
 function makeChoices(t){
   const p = pool(), k = Math.min(p.length, [2,3,4,4][state.lv[t]]);
+  if (S.all) return p;  // わおん：出ている旗 ぜんぶを いつも おなじ ならびで（色を さがしやすい）
   const near = S.near ? shuffle(S.near(t).filter(n => n !== t && p.includes(n))) : [];
   const rest = shuffle(p.filter(n => n !== t && !near.includes(n)));
   return shuffle([t, ...[...new Set(near), ...rest].slice(0, k-1)]);
@@ -204,7 +237,7 @@ function record(n, good){
   round.hits.push(n);
   const st = state.lv[n] >= 3 ? 3 : state.lv[n] >= 2 ? 2 : 1;
   if (st > state.evo[n]){ round.evolved.push({n, from: state.evo[n], to: st}); state.evo[n] = st; }
-  if (state.unlocked < S.max && range(1, state.unlocked).every(x => state.lv[x] >= 2)){
+  if (state.unlocked < S.max && range(1, state.unlocked).every(x => state.lv[x] >= (S.need || 2))){
     state.unlocked++; pendingNew = state.unlocked;
   }
   save();
@@ -212,7 +245,7 @@ function record(n, good){
 const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITEMS);
 
 /* ---------- がめん ---------- */
-const QUIZ = ['find','count','pair','next'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
+const QUIZ = ['find','count','pair','next','key','name','ear'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
 let round = {done:0, hits:[], evolved:[]}, walkRaf = 0, walkers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -234,12 +267,12 @@ function home(){
   const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
     + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
   const stones = range(1,S.max).map(n => n <= pool().length
-    ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.label[n]}</button>`
+    ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.flags ? '' : S.label[n]}</button>`
     : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
   stage.innerHTML = `
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
     <div class="path-label">${S.name}の みち</div>
-    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
+    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}${S.pitch ? ' notes' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
       `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
@@ -263,9 +296,21 @@ const LEARN_CARD = {
     return `<button class="bignum eqbig" data-n="${n}" aria-label="${S.yomi[n]}">${a}+${b}</button>
        ${groups(a, b, true)}
        <div class="hint">${a} と ${b} で <b class="q">?</b></div>`; },
+  // けんばん：けんばんの その場所に 色。おとあて：その音を くりかえし きける
+  key: n => noteCard(n), oto: n => noteCard(n),
+  // わおん：大きな 旗 と 和音の なまえ
+  waon: n => `<button class="bignum flagbig" data-n="${n}" aria-label="${S.yomi[n]}">${flagSVG(S.color[n])}</button>
+    <div class="hint">${S.label[n]}の はた：<b>${WAON[n][4]}</b></div>
+    <button class="play" data-play="cur" aria-label="もういちど きく">🔊</button>`,
   abc: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
        <button class="word" data-word="${n}" aria-label="${esc(WORD[n][1])}"><span class="em">${WORD[n][0]}</span><span>${markWord(WORD[n][1], S.lower[n])}</span></button>`,
 };
+function noteCard(n){
+  const k = S.nt(n), [nm, , , m, hint] = NOTE[k];
+  return `<button class="bignum" data-n="${n}" aria-label="${nm}">${nm}</button>
+    ${S.ear ? `<button class="play" data-play="cur" aria-label="${nm}の おと">🔊</button>` : `<div class="hint">${hint}</div>`}
+    ${keyboard({ on: WHITE.indexOf(m), names: true })}`;
+}
 function renderLearn(){
   const n = cur;
   counted = 0;
@@ -275,8 +320,31 @@ function renderLearn(){
       <button class="arrow" data-step="-1" ${n<=1?'disabled':''} aria-label="まえの ${S.name}">◀</button>
       <button class="arrow" data-step="1" ${n>=S.max?'disabled':''} aria-label="つぎの ${S.name}">▶</button>
     </div>`;
-  tell('learn', n);
+  // おとあて：読みおわったら その音を 鳴らす
+  if (S.ear) tellThen(() => playN(n), 'learn', n); else tell('learn', n);
 }
+/* ---------- けんばん ----------
+   まんなかの ド から 上の ド まで（白 8・黒 5）。どの鍵盤も さわると 本当の高さで 鳴る。
+   on：色をつける 白鍵（0〜7）、star：★の 白鍵、names：ぜんぶの 白鍵に なまえ、ans：白鍵で こたえる（data-ans は 音の番号） */
+const WHITE = [60,62,64,65,67,69,71,72], BLACK = [[61,1],[63,2],[66,4],[68,5],[70,6]];  // [高さ, 右どなりの白鍵]
+const PC = {0:1, 2:2, 4:3, 5:4, 7:5, 9:6, 11:7};  // 白鍵の高さ → NOTE の音（ド=1）
+const noteOf = m => PC[m % 12] || 0;
+function keyboard({ on = -1, star = -1, names = false, ans = false } = {}){
+  const w = WHITE.map((m, i) => { const k = noteOf(m), [nm, , c] = NOTE[k];
+    return `<button class="key w${i === on ? ' on' : ''}" data-key="${m}"${ans ? ` data-ans="${k}"` : ''} style="--c:${c}" aria-label="${ans || star >= 0 ? 'けんばん' : nm}">${i === star ? '<span class="kstar">★</span>' : ''}<span class="nm">${nm}</span></button>`; }).join('');
+  const b = BLACK.map(([m, r]) => `<button class="key b" data-key="${m}" style="--k:${r}" aria-label="くろい けんばん"></button>`).join('');
+  return `<div class="kb${names ? ' names' : ''}">${w}${b}</div>`;
+}
+function keyTap(el){
+  const m = +el.dataset.key, k = noteOf(m);
+  piano(m);
+  // どこ かな？：白鍵で こたえる（黒鍵は 音だけ）
+  if (mode === 'key'){ if (q.over) return; if (!k) return tell('keyBlack'); return answer(k, el); }
+  // みる：さわった音の なまえを 読む
+  if (mode === 'learn' && k){ bounce(el, 1.04); later(() => sayLine('noteName', k), 350); }
+}
+const playQ = () => playN(q.t);
+
 // 10のわく：5こまでは1だん、6こからは2だん
 const face = it => typeof it === 'string' ? it : `<img src="${it.src}" alt="" draggable="false">`;
 const faceLabel = it => typeof it === 'string' ? it : esc(it.name || 'え');
@@ -311,16 +379,31 @@ function countTap(el){
 
 // せいかい：ほめて 星をふやし、5つ たまったら ごほうび
 function win(n, next, ms){
-  tell(mode === 'ten' ? 'rightTen' : ADDQ.includes(mode) ? 'rightAdd' : 'right', pick(PRAISE), n, mode);
+  const praise = () => tell(mode === 'ten' ? 'rightTen' : ADDQ.includes(mode) ? 'rightAdd' : 'right', pick(PRAISE), n, mode);
+  // おとあて：さきに その音を きかせてから ほめる
+  mode === 'ear' ? later(praise, 900) : praise();
   round.done++; drawStars();
   later(() => round.done >= ROUND ? reward() : next(), ms);
 }
 function startQuiz(kind){ setMode(kind); newRound(); nextQ(); }
 function nextQ(){
   const t = pickTarget(mode === 'next' ? n => S.val(n) >= 3 : undefined); q = {t, miss:0, over:false};
+  reshift();
   const lab = mode === 'pair' ? S.lower : S.label;
-  const btns = makeChoices(t).map(n => `<button class="choice" data-ans="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${lab[n]}</button>`).join('');
-  if (mode === 'find'){
+  const btns = makeChoices(t).map(n => `<button class="choice" data-ans="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${S.flags ? flagSVG(S.color[n]) + `<span>${lab[n]}</span>` : lab[n]}</button>`).join('');
+  if (mode === 'key'){
+    stage.innerHTML = `<button class="hear" id="hear">🔊 もういちど きく</button><div class="card count-card">${keyboard({ ans: true })}</div>`;
+    tell('keyFind', t);
+  } else if (mode === 'name'){
+    // ★は その音の 白鍵（ド は 下か 上の どちらか）
+    const at = pick(WHITE.map((m, i) => noteOf(m) === S.nt(t) ? i : -1).filter(i => i >= 0));
+    stage.innerHTML = `<div class="card count-card">${keyboard({ star: at })}</div><div class="choices notes">${btns}</div>`;
+    tell('keyName');
+  } else if (mode === 'ear'){
+    // 音の ボタンだけ（選択肢は 音を 鳴らさない：くらべて あてないように）
+    stage.innerHTML = `<button class="play big" data-play="q" aria-label="もういちど きく">🔊</button><div class="choices ${S.flags ? 'flags' : 'notes'}">${btns}</div>`;
+    tellThen(playQ, 'ear');
+  } else if (mode === 'find'){
     stage.innerHTML = `<button class="hear" id="hear">🔊 もういちど きく</button><div class="choices">${btns}</div>`;
     tell('find', t);
   } else if (mode === 'pair'){
@@ -343,16 +426,18 @@ function answer(n, el){
   if (q.over) return;
   if (n === q.t){
     q.over = true;
-    el.classList.add('right'); chime(); burst(el);
+    el.classList.add('right'); burst(el);
+    mode === 'ear' ? playQ() : chime();
     record(q.t, q.miss === 0);
     stage.querySelectorAll('.choice').forEach(b => b.disabled = true);
-    win(n, nextQ, 1700);
+    win(n, nextQ, mode === 'ear' ? 2800 : 1700);
   } else {
     // まちがいは やさしく：その数字の なまえを おしえて、もう一度
     q.miss++; boop();
     el.classList.add('wrong'); el.disabled = true;
     if (mode === 'count') tell('wrongCount', S.val(n));
-    else tell({ find: 'wrongFind', pair: 'wrongPair', next: 'wrongNext' }[mode], n, q.t);
+    else if (mode === 'ear') tellThen(playQ, 'wrongEar', n);  // もういちど おなじ音
+    else tell({ find: 'wrongFind', pair: 'wrongPair', next: 'wrongNext', key: 'wrongKey', name: 'wrongName' }[mode], n, q.t);
     if (q.miss >= 2) stage.querySelector(`[data-ans="${q.t}"]`).classList.add('glow');
   }
 }
@@ -679,7 +764,7 @@ function writeOk(){
 /* ---------- ごほうび：なかまに する ---------- */
 let rw = null;
 function reward(){
-  setMode('reward');
+  setMode('reward'); reshift();
   const hits = [...new Set(round.hits)];
   const pool2 = hits.length ? hits : pool();
   const fresh2 = pool2.filter(n => !state.caught[n]);
@@ -888,6 +973,8 @@ stage.addEventListener('click', e => {
   const part = mode === 'nurie' && e.target.closest('.part'); if (part) return paint(part);
   const el = e.target.closest('button'); if (!el || el.disabled || el.classList.contains('balloon')) return;
   if (el.dataset.paint) return choosePen(el);
+  if (el.dataset.key) return keyTap(el);
+  if (el.dataset.play){ bounce(el, 1.08); return playN(el.dataset.play === 'q' ? q.t : cur); }
   if (el.dataset.draw){ tone(784, 0, .15, 'triangle', .12); return openPic(el.dataset.draw); }
   if (el.id === 'nreset') return resetNurie(el);
   if (el.dataset.subj){ if (el.dataset.subj !== S.id) { useSubj(el.dataset.subj); tone(784,0,.15,'triangle',.12); } return home(); }
@@ -904,7 +991,7 @@ stage.addEventListener('click', e => {
   if (el.dataset.mon){
     const n = +el.dataset.mon;
     el.animate([{transform:'translateY(0)'},{transform:'translateY(-10px)'},{transform:'translateY(0)'}],{duration:350});
-    tone(note(n), 0, .3, 'triangle', .14);
+    ding(n);
     return tell('mon', n);
   }
   if (el.dataset.pic){
@@ -944,13 +1031,13 @@ function openSheet(){
   const open = pool().length;
   sheetIn.innerHTML = `
     <h2 id="sheetTitle">おうちのかたへ</h2>
-    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」を切りかえられます。記録と仲間はそれぞれ別に残ります。以下は いま選んでいる「${S.name}」についてです。</p>
+    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はそれぞれ別に残ります。以下は いま選んでいる「${S.name}」についてです。</p>
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>
     <div class="meter" style="grid-template-columns:repeat(${S.cols || (S.max % 10 ? Math.min(S.max, 13) : 10)},minmax(0,1fr))">${range(1,S.max).map(n => `<div class="${n>open?'lock':''}" style="--c:${S.color[n]}">
       <span class="bar-v"><i style="height:${state.lv[n]/3*100}%"></i></span>${S.label[n]}</div>`).join('')}</div>
-    <div class="legend">出ている${S.unit}：${S.label[1]}〜${S.label[open]}　／　なかま ${caughtCount()}ひき</div>
+    <div class="legend">出ている${S.unit}：${S.pitch ? range(1, open).map(n => S.label[n]).join('・') : `${S.label[1]}〜${S.label[open]}`}　／　なかま ${caughtCount()}ひき</div>
     <h3>おうちの なかま（すきな画像）</h3>
     <p class="legend">選んだ画像は「かぞえる絵」とごほうび画面に出ます。名前を入れると読み上げます（ひらがながおすすめ）。画像はこの端末のブラウザの中だけに保存され、どこにも送られません。最大${MAXPICS}枚。</p>
     <div class="pics">${pics.map(p => `<div class="pic"><img src="${p.src}" alt="">
