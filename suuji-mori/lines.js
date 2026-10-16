@@ -70,6 +70,8 @@ const LINE = {
   evolved: line('n', n => [`${monName(n)}が しんかした！`, `${monName(n)}が、進化した！ ${V(n)}が、得意になったね`]),
   newOne: line('n', n => [`あたらしい ${S.name} ${S.label[n]} が でてきたよ`, `新しい${S.unit}、${V(n)}が出てきたよ`]),
   book: line('c', c => [c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ', c ? `仲間が${c}匹いるよ。 触ってみてね` : '遊ぶと仲間が増えるよ']),
+  hiroba: line('c', c => [c ? `なかまが ${c}ひき あそんでるよ。さわってみてね` : 'まだ なかまが いないよ。あそぶと なかまが ふえるよ',
+    c ? `仲間が${c}匹、遊んでるよ。 触ってみてね` : 'まだ仲間がいないよ。 遊ぶと、仲間が増えるよ']),
   mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monName(n)}。 ${V(n)}の仲間だよ`]),
   word: line(null, n => [null, `«${WORD[n][1]}|${WORD[n][2]}»`]),
   tryIt: line('', () => [null, S.tryIt()]),
