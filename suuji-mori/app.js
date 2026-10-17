@@ -280,6 +280,7 @@ function setMode(m){
   whoChip.innerHTML = `<span style="--c:${me.color}">${esc([...me.name][0] || '?')}</span>${esc(me.name)}`;
   // あげていない星は へらさない：画面が かわるときは そのまま キラへ
   gifts.slice().forEach(g => receive(g));
+  roundDone = 0;  // とちゅうで やめた 1回は かぞえない（つぎは 1もんめから）
   if (!game){ kiraFace(m === 'night' ? 'sleepy' : 'normal'); kiraSays(''); }
   drawJar();
 }
@@ -800,9 +801,11 @@ function writeOk(){
 }
 
 /* ---------- キラ（え は kira-art.js、そだつ しくみ は kira.js） ----------
-   せいかい → 大きな星、まちがい → 小さな「がんばったほし」（1もんに 1こ）。星は キラまで ドラッグ か タップで とんでいく。
+   1回の 学習（5もん）が おわるごとに 大きな星を 1こ だす。問題の とちゅうでは 出さない（集中を きらさない）。
+   星は キラまで ドラッグ か タップで とんでいく。
    星が ビンに たまって 必要数に とどいたら へんしん。1日の 時間を こえたら 問題の 区切りで ねむくなって おやすみ。 */
 let kface = 'normal', gifts = [], giftsShown = 0, greetNext = false, saidNew = null;
+let roundDone = 0;  // いまの 1回で おわった 問題の数
 const drawKira = () => { kiraBtn.innerHTML = kiraArt(kira.stage, kface, kira.maneColors); };
 function kiraFace(f){ if (f !== kface){ kface = f; drawKira(); } }
 function kiraSays(t){ kbubble.textContent = t; kbubble.hidden = !t; }
@@ -828,18 +831,18 @@ function drawJar(bump){
 }
 
 // 星を だす。キラに とどいたら resolve（かえす値：へんしん { from, to } | null）
-function makeGift(big){
+function makeGift(){
   const el = document.createElement('button');
-  el.className = 'gift ' + (big ? 'big' : 'small');
-  el.setAttribute('aria-label', big ? 'ほし。キラに あげる' : 'がんばったほし。キラに あげる');
+  el.className = 'gift big';
+  el.setAttribute('aria-label', 'ほし。キラに あげる');
   el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${kStar(50, 53, 46)}</svg>`;
   kiraArea.appendChild(el);
-  const g = { el, big };
+  const g = { el, big: true };
   const p = new Promise(r => g.resolve = r);
   gifts.push(g);
-  if (big) giftsShown++;
+  giftsShown++;
   if (!reduce) el.animate([{transform:'scale(0) rotate(-120deg)'},{transform:'scale(1.15) rotate(0)'},{transform:'scale(1)'}], {duration:500, easing:'ease-out'});
-  big ? tone(1047, 0, .2, 'triangle', .12) : tone(880, 0, .12, 'triangle', .07);
+  tone(1047, 0, .2, 'triangle', .12);
   drawGuide();
   el.addEventListener('pointerdown', e => dragGift(g, e));
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fly(g); } });
@@ -892,42 +895,43 @@ function receive(g){
   if (!gifts.includes(g)) return;
   gifts = gifts.filter(x => x !== g);
   g.el.remove(); drawGuide();
-  const r = giveStars(kira, g.big ? kcfg.starForCorrect : kcfg.starForTry, kcfg, Date.now());
+  const r = giveStars(kira, kcfg.starPerRound, kcfg, Date.now());
   kira = r.kira; saveKira();
   drawJar(true);
   kiraFace('happy'); kiraHop();
   kiraBtn.classList.remove('glow'); void kiraBtn.offsetWidth; kiraBtn.classList.add('glow');
   sparkle();
-  if (!g.big) later(() => { if (q && !q.over) kiraFace('thinking'); }, 1200);
-  // せいかいの 星の へんしんは starTime が みせる。それ以外（がんばったほし・画面が かわった）は ここで
-  if (r.evolved && (!g.big || !GAMES.includes(mode))) showEvolve(r.evolved);
+  // せいかいの 星の へんしんは starTime が みせる。それ以外（画面が かわった）は ここで
+  if (r.evolved && !GAMES.includes(mode)) showEvolve(r.evolved);
   g.resolve(r.evolved);
 }
 
-// まちがえた：がんばったほし（1もんに 1こ）。こまり顔は すこしだけ
+// まちがえた：こまり顔は すこしだけ（星は 出さない）
 function tried(){
   if (!q || q.tried) return;
   q.tried = true;
-  kiraFace('oshii'); kiraSays('がんばったほし！');
+  kiraFace('oshii');
   later(() => { if (q && !q.over) kiraFace('thinking'); }, 1600);
-  makeGift(false);
 }
 
-// せいかいの あと：大きな星を キラへ → ありがとう → (教科クリア) → (へんしん) → つぎ か おやすみ
+// せいかいの あと：(1回の さいごなら 大きな星を キラへ → ありがとう) → (教科クリア) → (へんしん) → つぎ か おやすみ
 async function starTime(next, until){
   const tok = token;
-  gifts.filter(g => !g.big).forEach(fly);  // のこっている がんばったほしは さきに とんでいく
-  kiraSays('ほしを ちょうだい！');
-  const nag = n => later(() => {  // なかなか あげないときは やさしく さそう（3回まで）
-    if (tok !== token || !gifts.some(g => g.big)) return;
-    kiraSays('ほしを ちょうだい！'); kiraHop(); sayKira(LINE.giveStar()[1]);
-    gifts.filter(g => g.big).forEach(g => !reduce && g.el.animate([{rotate:'0deg'},{rotate:'-14deg'},{rotate:'14deg'},{rotate:'0deg'}], {duration:500}));
-    if (n < 3) nag(n + 1);
-  }, 8000);
-  nag(1);
-  const evolved = await makeGift(true);
-  if (tok !== token) return;
-  kiraSays('ありがとう！');  // ほめ言葉を さえぎらないよう 声は 出さない
+  let evolved = null;
+  if (++roundDone >= kcfg.questionsPerRound){
+    roundDone = 0;
+    kiraSays('ほしを ちょうだい！');
+    const nag = k => later(() => {  // なかなか あげないときは やさしく さそう（3回まで）
+      if (tok !== token || !gifts.some(g => g.big)) return;
+      kiraSays('ほしを ちょうだい！'); kiraHop(); sayKira(LINE.giveStar()[1]);
+      gifts.filter(g => g.big).forEach(g => !reduce && g.el.animate([{rotate:'0deg'},{rotate:'-14deg'},{rotate:'14deg'},{rotate:'0deg'}], {duration:500}));
+      if (k < 3) nag(k + 1);
+    }, 8000);
+    nag(1);
+    evolved = await makeGift();
+    if (tok !== token) return;
+    kiraSays('ありがとう！');  // ほめ言葉を さえぎらないよう 声は 出さない
+  }
   await wait(Math.max(900, until - Date.now()));
   if (topicCleared(state.lv, S.max, kcfg.topicClearLevel)){
     const r = clearTopic(kira, S.id, kcfg);
