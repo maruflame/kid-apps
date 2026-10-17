@@ -1,22 +1,28 @@
-/* Layout: one-screen picture-book app. Top bar (home / stars / parents), guide owl with a speech bubble, then a play stage that fills the rest.
-   Single visual world by choice (a bright forest picture book), so every color is set explicitly and works on any host background. */
+/* Layout: one-screen picture-book app (base 390×844). Top bar (home / star jar / parents), Kira's area with her speech bubble,
+   then a white board: the question text with a read-aloud button, and the play stage that fills the rest (answers sit in the lower half).
+   Single visual world by choice (Kira's pastel night sky), so every color is set explicitly and works on any host background. */
 :root{
-  --ground:#E4F3E8;
-  --ground-2:#CDE7D4;
-  --ink:#1F3D35;
-  --ink-soft:#557369;
-  --paper:#FFFDF6;
-  --leaf:#3E9B6F;
-  --sun:#FFC93C;
-  --berry:#E5484D;
-  --sky:#2E8FD0;
-  --shade:rgba(31,61,53,.14);
+  --ground:#F6F2FF;
+  --ground-2:#E6DCFB;
+  --ink:#3A2E6E;
+  --ink-soft:#6F64A3;
+  --paper:#FFFFFF;
+  --leaf:#7B5BD6;
+  --leaf-d:#5A3FB0;
+  --sun:#FFD15C;
+  --sun-d:#E8B53A;
+  --berry:#F28BB8;
+  --berry-d:#D0447E;
+  --sky:#7B5BD6;
+  --shade:rgba(58,46,110,.12);
   --f-num:"Fredoka","Zen Maru Gothic","Hiragino Maru Gothic ProN",system-ui,sans-serif;
   --f-ja:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
   --r:28px;
+  --kira-h:clamp(150px,30vh,290px);
 }
 [hidden]{display:none !important}
 html,body{height:100%}
+body{margin:0}
 body{
   background:var(--ground);color:var(--ink);font-family:var(--f-ja);
   overflow:hidden;-webkit-user-select:none;user-select:none;
@@ -32,23 +38,86 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .bar{display:flex;align-items:center;gap:12px;padding-block:12px 4px;min-height:60px}
 .round-btn{width:56px;height:56px;border-radius:50%;border:0;background:var(--paper);box-shadow:0 4px 0 var(--shade);font-size:28px;display:grid;place-items:center;flex:none}
 .round-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--shade)}
-.stars{display:flex;gap:6px;margin-inline:auto;font-size:30px;line-height:1}
-.stars span{color:var(--ground-2);transition:transform .3s,color .3s}
-.stars span.on{color:var(--sun);transform:scale(1.15);text-shadow:0 2px 0 #D99A00}
 .spacer{margin-inline:auto}
-.gear{position:relative;width:52px;height:52px;border-radius:50%;border:0;background:transparent;font-size:15px;font-weight:700;color:var(--ink-soft);line-height:1.1;flex:none}
+/* ほしの ビン：ビンの絵＋丸5つ（数字は出さず、たまった わりあいを 丸の ぬりで） */
+.jar{flex:none;display:flex;align-items:center;gap:5px;background:var(--paper);border-radius:999px;padding:5px 12px 5px 6px;box-shadow:0 4px 0 var(--shade)}
+.jar-ic svg{display:block;width:34px;height:40px}
+.jar i{width:18px;height:18px;border-radius:50%;background:linear-gradient(to right,var(--sun) var(--f),var(--ground-2) var(--f));box-shadow:inset 0 0 0 2px rgba(232,181,58,.45)}
+.who-chip{flex:none;white-space:nowrap;display:flex;align-items:center;gap:8px;border:0;border-radius:999px;background:var(--paper);padding:6px 16px 6px 6px;min-height:56px;font-weight:900;font-size:20px;box-shadow:0 4px 0 var(--shade)}
+.who-chip span{width:44px;height:44px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-size:22px}
+.gear{position:relative;width:52px;height:52px;padding:0;border-radius:50%;border:0;background:transparent;font-size:15px;font-weight:700;color:var(--ink-soft);line-height:1.1;flex:none}
 .gear svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .gear circle{fill:none;stroke:var(--leaf);stroke-width:4;stroke-dasharray:151;stroke-dashoffset:151}
 .gear.holding circle{transition:stroke-dashoffset 1.2s linear;stroke-dashoffset:0}
 
-/* guide owl + bubble */
-.guide{display:flex;align-items:center;gap:10px;padding-block:6px}
-.owl{border:0;background:none;font-size:clamp(46px,11vw,60px);line-height:1;padding:0;flex:none;animation:bob 3s ease-in-out infinite}
-.bubble{position:relative;background:var(--paper);border-radius:22px;padding:12px 18px;font-size:clamp(18px,4.6vw,26px);font-weight:900;line-height:1.35;box-shadow:0 4px 0 var(--shade);text-wrap:balance}
-.bubble::before{content:"";position:absolute;left:-10px;top:50%;margin-top:-10px;border:10px solid transparent;border-right-color:var(--paper);border-left:0}
+/* キラの エリア：まんなかに キラ、左上に ふきだし。せいかいの 星は 右下に出て、キラへの 点線ガイドが つく */
+.kira-area{position:relative;flex:none;height:var(--kira-h);display:flex;align-items:center;justify-content:center}
+.kira-area::before{content:"";position:absolute;inset:6% 18%;border-radius:50%;background:radial-gradient(closest-side,#FFF6D6,rgba(255,246,214,0));pointer-events:none}
+.kira{position:relative;border:0;background:none;padding:0;height:calc(var(--kira-h) * .9);width:calc(var(--kira-h) * .9);flex:none;display:grid;place-items:center;animation:bob 3s ease-in-out infinite;touch-action:manipulation}
+.kira.glow .kira-fig{animation:kglow2 .9s ease-out}
+.kbubble{position:absolute;left:0;top:6%;z-index:3;max-width:52%;background:var(--paper);border-radius:22px;padding:10px 16px;font-size:clamp(17px,4.6vw,22px);font-weight:900;line-height:1.3;box-shadow:0 4px 0 var(--shade);animation:pop .35s}
+.kbubble::after{content:"";position:absolute;right:18px;bottom:-12px;border:12px solid transparent;border-top-color:var(--paper);border-bottom:0}
+.kira-fig{position:relative;display:block;width:100%;height:100%}
+.kira-svg{display:block;width:100%;height:100%;overflow:visible}
+.kira-photo{position:absolute;inset:4%;border-radius:32%;overflow:hidden;border:5px solid #fff;box-shadow:0 6px 0 var(--shade);background:#fff}
+.kira-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block;-webkit-user-drag:none}
+/* たてがみの色：最終形の まわりの にじの わ（色が ふえると 本数が ふえる） */
+.kira-fig.has-mane::before{content:"";position:absolute;inset:-1%;border-radius:34%;background:var(--mane);opacity:.9}
+/* 画像の キラの 表情は まわりの しるしで */
+.kira-fig .fx{position:absolute;right:-4%;top:0;font-size:clamp(24px,7vw,40px);font-weight:900;color:var(--leaf);pointer-events:none}
+.kira-fig.is-img[data-face="oshii"] .fx::after{content:"💦"}
+.kira-fig.is-img[data-face="thinking"] .fx::after{content:"？"}
+.kira-fig.is-img[data-face="sleepy"] .fx::after{content:"Zz"}
+.kira-fig.is-img[data-face="happy"] .fx::after{content:"✨"}
+.kira-fig.is-img[data-face="sleepy"] .kira-photo img{filter:brightness(.85) saturate(.85)}
+.kira-fig.is-img[data-face="oshii"]{rotate:-4deg}
+.guide-line{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.guide-line line{stroke:var(--sun-d);stroke-width:4;stroke-dasharray:2 12;stroke-linecap:round;animation:march .8s linear infinite}
+/* キラへ あげる 星（ドラッグ・タップ） */
+.gift{position:absolute;z-index:4;border:0;background:none;padding:0;touch-action:none;cursor:grab;filter:drop-shadow(0 5px 0 rgba(232,181,58,.45))}
+.gift svg{display:block;width:100%;height:100%;animation:twinkle 1.4s ease-in-out infinite}
+.gift.big{right:2%;bottom:2%;width:clamp(88px,24vw,112px);aspect-ratio:1}
+.gift.small{left:4%;bottom:6%;width:64px;aspect-ratio:1;opacity:.95}
+.gift.small::before{content:"";position:absolute;inset:-12px}
+.gift.held{cursor:grabbing;scale:1.12;z-index:6}
+
+/* 問題の ボード（白・角丸36）：問題文＋読み上げボタン、その下に あそび */
+.board{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--paper);border-radius:36px 36px 0 0;margin-inline:-16px;padding:12px 16px 0;box-shadow:0 -4px 0 var(--shade)}
+.qbar{display:flex;align-items:center;gap:10px;padding:2px 2px 6px}
+.bubble{flex:1;font-size:clamp(20px,6.2vw,28px);font-weight:900;line-height:1.3;text-wrap:balance;min-height:1.3em}
+.hear-btn{flex:none;width:56px;height:56px;border-radius:50%;border:0;background:var(--ground);font-size:26px;display:grid;place-items:center;box-shadow:0 4px 0 var(--ground-2)}
+.hear-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ground-2)}
 
 /* stage */
-.stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:18px;padding-block:10px 22px;position:relative;overflow-y:auto;overflow-x:hidden}
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:18px;padding-block:6px 22px;position:relative;overflow-y:auto;overflow-x:hidden}
+/* ホームなどは キラを 小さく */
+.app:not([data-mode="game"]){--kira-h:clamp(96px,14vh,140px)}
+.app[data-mode="who"] .kira{visibility:hidden}
+.app[data-mode="night"]{--kira-h:clamp(160px,32vh,290px)}
+
+/* だれが あそぶ？ */
+.who{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:520px}
+.who-btn{border:0;border-radius:32px;background:var(--ground);min-width:150px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:900;font-size:clamp(24px,7vw,30px);box-shadow:0 6px 0 var(--ground-2)}
+.who-btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ground-2)}
+.who-ic{width:96px;height:96px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-size:48px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.12)}
+
+/* おやすみ */
+.night{position:relative;width:100%;flex:1;min-height:220px;border-radius:32px;background:linear-gradient(#5B4A9E,#8E7BD0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow:hidden;color:#fff}
+.moon{width:72px;height:72px;border-radius:50%;box-shadow:-16px 8px 0 0 #FFE9A8;translate:12px -6px}
+.zz span{position:absolute;left:var(--x);top:var(--y);color:#FFE9A8;font-size:18px;animation:twinkle 2.2s ease-in-out infinite;animation-delay:var(--d)}
+.app.sleeping .kira{animation:breathe 3.6s ease-in-out infinite}
+
+/* へんしん：光の放射（12本）＋パステルの星、まんなかに 新しい キラ */
+.evolve{position:fixed;inset:0;z-index:30;background:var(--ground);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,3vh,24px);padding:24px 16px;box-sizing:border-box;overflow:hidden}
+.ev-rays{position:absolute;left:50%;top:44%;width:180vmax;aspect-ratio:1;translate:-50% -50%;background:repeating-conic-gradient(rgba(255,209,92,.32) 0 15deg,transparent 15deg 30deg);animation:spin 30s linear infinite}
+.ev-stars span{position:absolute;left:var(--x);top:var(--y);color:var(--c);font-size:26px;animation:twinkle 1.8s ease-in-out infinite;animation-delay:var(--d)}
+.ev-title{position:relative;margin:0;font-size:56px;font-weight:900;color:var(--leaf);letter-spacing:.06em;text-shadow:0 4px 0 #fff}
+.ev-frame{position:relative;width:min(64vw,34vh,280px);aspect-ratio:1;background:#fff;border-radius:40px;border:6px solid #fff;box-shadow:0 8px 0 var(--shade);display:grid;place-items:center;padding:10px;box-sizing:border-box}
+.ev-card{position:relative;display:flex;align-items:center;gap:14px;background:#fff;border-radius:28px;padding:14px 20px;box-shadow:0 6px 0 var(--shade);max-width:340px}
+.ev-card p{margin:0;font-size:clamp(18px,5vw,22px);font-weight:900;line-height:1.45}
+.ev-jar svg{display:block;width:48px;height:58px}
+.ev-btn{position:relative;width:min(300px,100%);height:88px;border:0;border-radius:44px;background:var(--berry);color:#fff;font-size:32px;font-weight:900;box-shadow:0 7px 0 var(--berry-d)}
+.ev-btn:active{transform:translateY(5px);box-shadow:0 2px 0 var(--berry-d)}
 
 /* home */
 .subj{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;background:var(--paper);padding:6px;border-radius:30px;box-shadow:0 4px 0 var(--shade)}
@@ -78,7 +147,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .book-btn b{display:inline-block;background:var(--sun);border-radius:999px;padding:2px 10px;font-family:var(--f-num)}
 
 /* card + ten frame */
-.card{background:var(--paper);border-radius:36px;padding:14px 22px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 8px 0 var(--shade);width:100%;max-width:540px;box-sizing:border-box}
+.card{background:var(--ground);border-radius:32px;padding:14px 22px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:540px;box-sizing:border-box}
 .bignum{border:0;background:none;font:700 clamp(104px,28vw,180px)/1 var(--f-num);color:var(--c);padding:0 20px}
 .bignum .lo{margin-left:.06em;opacity:.6}
 .bignum .tens{color:var(--leaf)}
@@ -94,7 +163,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .bars{display:flex;flex-direction:column;gap:8px;width:100%;max-width:480px}
 .tenrow{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 4px repeat(5,minmax(0,1fr));gap:4px;width:100%;padding:5px;border:0;border-radius:14px;background:none;box-sizing:border-box}
 .tenrow > :nth-child(6){grid-column-start:7}
-button.tenrow{background:#DDF0E4}
+button.tenrow{background:#EFE8FF}
 .tenrow .cell{border-radius:10px;border-width:2px;font-size:clamp(14px,4.2vw,26px)}
 .tenrow.tapped{background:#FFE48A;animation:pop .35s}
 .tenrow.tapped .cell{border-color:var(--sun)}
@@ -111,18 +180,17 @@ button.tenrow{background:#DDF0E4}
 .cell.tapped{background:#FFF1C2;border-color:var(--sun);animation:pop .35s}
 .cell .tag{position:absolute;right:-6px;top:-8px;min-width:26px;height:26px;border-radius:13px;background:var(--ink);color:#fff;font:600 16px/26px var(--f-num)}
 .nav{display:flex;gap:28px}
-.arrow{width:84px;height:84px;border-radius:50%;border:0;background:var(--leaf);color:#fff;font-size:32px;box-shadow:0 5px 0 #2C7352}
-.arrow:active{transform:translateY(4px);box-shadow:0 1px 0 #2C7352}
+.arrow{width:84px;height:84px;border-radius:50%;border:0;background:var(--leaf);color:#fff;font-size:32px;box-shadow:0 5px 0 var(--leaf-d)}
+.arrow:active{transform:translateY(4px);box-shadow:0 1px 0 var(--leaf-d)}
 .arrow:disabled{background:var(--ground-2);box-shadow:none;color:var(--paper);cursor:default}
 
 /* choices */
 .choices{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;max-width:680px}
-.choice{width:clamp(124px,37vw,170px);aspect-ratio:1;border-radius:32px;border:0;background:var(--paper);font:700 clamp(74px,21vw,110px)/1 var(--f-num);color:var(--c);box-shadow:0 8px 0 var(--shade);transition:opacity .3s}
+.choice{width:clamp(96px,28vw,150px);aspect-ratio:1;border-radius:30px;border:4px solid var(--ground-2);background:var(--paper);font:700 clamp(74px,21vw,110px)/1 var(--f-num);color:var(--c);box-shadow:0 8px 0 var(--shade);transition:opacity .3s}
 .choice:active{transform:translateY(5px);box-shadow:0 3px 0 var(--shade)}
 .choice.wrong{opacity:.35;animation:shake .45s}
-.choice.right{background:var(--c);color:#fff;animation:jump .6s}
+.choice.right{background:#FDE3EF;border-color:var(--berry);animation:jump .6s}
 .choice.glow{animation:glow 1.1s ease-in-out infinite}
-.hear{border:0;background:var(--sky);color:#fff;font-weight:900;font-size:22px;padding:16px 30px;border-radius:999px;box-shadow:0 5px 0 #1F6EA3}
 .count-card{padding-top:20px}
 
 /* たしざん */
@@ -142,7 +210,7 @@ button.tenrow{background:#DDF0E4}
 .groups.joined .grp:first-child{border-radius:20px 0 0 20px;padding-right:3px}
 .groups.joined .grp:last-child{border-radius:0 20px 20px 0;padding-left:3px}
 /* ふえると：バスの 座席は 10の わく（5×2） */
-.bus{position:relative;width:100%;max-width:440px;box-sizing:border-box;background:var(--sun);border-radius:22px 60px 22px 22px;padding:14px 46px 26px 14px;margin-bottom:20px;box-shadow:0 6px 0 #D99A00}
+.bus{position:relative;width:100%;max-width:440px;box-sizing:border-box;background:var(--sun);border-radius:22px 60px 22px 22px;padding:14px 46px 26px 14px;margin-bottom:20px;box-shadow:0 6px 0 var(--sun-d)}
 .bus::before,.bus::after{content:"";position:absolute;bottom:-20px;width:42px;height:42px;border-radius:50%;background:var(--ink);border:7px solid #B9C6C1;box-sizing:border-box}
 .bus::before{left:14%}
 .bus::after{right:20%}
@@ -168,11 +236,11 @@ button.tenrow{background:#DDF0E4}
 .key.w.right{animation:pop .4s}
 .key.w.wrong{background:#E4E9E7;color:var(--ink-soft);animation:shake .45s}
 .key.w.glow{animation:kglow 1.1s ease-in-out infinite}
-.kstar{font-size:clamp(26px,7vw,40px);color:var(--sun);text-shadow:0 2px 0 #D99A00;animation:bob 1.6s ease-in-out infinite}
+.kstar{font-size:clamp(26px,7vw,40px);color:var(--sun);text-shadow:0 2px 0 var(--sun-d);animation:bob 1.6s ease-in-out infinite}
 .key.b{position:absolute;top:6px;left:calc(6px + (100% - 12px) * var(--k) / 8 - 1.5px);transform:translateX(-50%);width:calc((100% - 12px) / 8 * .6);height:58%;background:#2A302E;border-radius:0 0 7px 7px;box-shadow:inset 0 -6px 0 #0E1211;z-index:2}
 .key.b:active{background:#4A524F;box-shadow:inset 0 -2px 0 #0E1211}
-.play{width:clamp(96px,26vw,128px);aspect-ratio:1;border-radius:50%;border:0;background:var(--sky);color:#fff;font-size:clamp(44px,12vw,60px);box-shadow:0 6px 0 #1F6EA3;flex:none}
-.play:active{transform:translateY(4px);box-shadow:0 2px 0 #1F6EA3}
+.play{width:clamp(96px,26vw,128px);aspect-ratio:1;border-radius:50%;border:0;background:var(--sky);color:#fff;font-size:clamp(44px,12vw,60px);box-shadow:0 6px 0 var(--leaf-d);flex:none}
+.play:active{transform:translateY(4px);box-shadow:0 2px 0 var(--leaf-d)}
 .play.big{width:clamp(140px,40vw,190px);font-size:clamp(64px,18vw,90px);animation:bob 2.4s ease-in-out infinite}
 .choices.notes .choice{font-size:clamp(44px,12vw,68px);letter-spacing:-.04em}
 /* わおん：旗（出ている旗 ぜんぶ、3つずつ ならぶ） */
@@ -202,31 +270,18 @@ button.tenrow{background:#DDF0E4}
 .goal-num{width:72px;height:72px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 40px/1 var(--f-num)}
 .goal-dots{display:flex;gap:8px}
 .goal-dots i{width:22px;height:22px;border-radius:50%;background:var(--ground-2)}
-.goal-dots i.on{background:var(--sun);box-shadow:0 0 0 3px #F0B000 inset}
+.goal-dots i.on{background:var(--sun);box-shadow:0 0 0 3px var(--sun-d) inset}
 .sky{position:relative;flex:1;width:100%;min-height:240px;border-radius:32px;overflow:hidden;background:linear-gradient(#CFEAFB,#EAF6FD)}
 .bwrap{position:absolute;top:100%;will-change:transform}
 .balloon{position:relative;display:grid;place-items:center;width:clamp(86px,23vw,112px);aspect-ratio:.82;border:0;padding:0;border-radius:50% 50% 48% 48%/56% 56% 44% 44%;background:var(--bc);color:#fff;font:700 clamp(42px,11vw,56px)/1 var(--f-num);text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset -9px -12px 0 rgba(0,0,0,.13),inset 8px 8px 0 rgba(255,255,255,.18);animation:sway 2.4s ease-in-out infinite;transform-origin:50% 120%}
 .balloon::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:46px;background:rgba(31,61,53,.35)}
 
-/* reward: catch a monster */
-.prize{position:relative;width:min(56vw,240px,34vh);aspect-ratio:1;display:grid;place-items:center;flex:none}
-.rays{position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(var(--sun) 0 10deg,#FFE48A 10deg 20deg);animation:spin 14s linear infinite;opacity:.9}
-.monwrap{position:relative;width:96%;aspect-ratio:1}
 .mon{display:block;width:100%;height:100%}
-.mon-name{font-weight:900;font-size:clamp(20px,5vw,26px);background:var(--paper);padding:4px 20px;border-radius:999px;box-shadow:0 4px 0 var(--shade);display:flex;gap:10px;align-items:center}
-.mon-name .st{color:#D99A00;font-size:.8em;letter-spacing:.05em}
-.capsule{border:0;background:none;width:92px;height:92px;padding:0;display:flex;flex-direction:column;align-items:center;font-weight:900;font-size:14px;color:var(--ink-soft);position:relative;z-index:5}
-.capsule svg{width:78px;height:78px;animation:bob 1.6s ease-in-out infinite}
-.after{display:flex;flex-direction:column;align-items:center;gap:14px}
-.cheer{display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px}
-.cheer img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:4px solid #fff;box-shadow:0 4px 0 var(--shade);animation:bob 1.4s ease-in-out infinite}
 .row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-.pill{border:0;border-radius:999px;padding:18px 34px;font-weight:900;font-size:23px;background:var(--berry);color:#fff;box-shadow:0 5px 0 #A92F33}
+.pill{border:0;border-radius:999px;padding:18px 34px;min-height:72px;font-weight:900;font-size:23px;background:var(--berry);color:#fff;box-shadow:0 5px 0 var(--berry-d)}
 .pill.alt{background:var(--paper);color:var(--ink);box-shadow:0 5px 0 var(--shade)}
 .pill:active{transform:translateY(4px);box-shadow:none}
 .pill:disabled{opacity:.4;transform:none;box-shadow:none;cursor:default}
-.newnum{border:0;display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:999px;padding:8px 24px 8px 8px;font-weight:900;font-size:22px;box-shadow:0 5px 0 var(--shade)}
-.newnum span{min-width:58px;height:58px;padding-inline:10px;box-sizing:border-box;border-radius:29px;background:var(--c);color:#fff;display:grid;place-items:center;font:700 36px/1 var(--f-num)}
 
 /* nurie */
 .nurie-card{background:var(--paper);border-radius:28px;padding:10px;box-shadow:0 8px 0 var(--shade);display:flex;justify-content:center;max-width:100%;box-sizing:border-box}
@@ -249,8 +304,8 @@ button.tenrow{background:#DDF0E4}
 .zslot .mon{aspect-ratio:1;height:auto}
 .zslot.sil .mon{filter:brightness(0) opacity(.16)}
 .zslot.sil{color:var(--ink-soft);cursor:default}
-.zslot .st{color:#D99A00;font-size:.9em}
-.mon-name .en,.zslot .en{font-family:var(--f-num);font-weight:600;color:var(--ink-soft);font-size:.7em}
+.zslot .st{color:var(--sun-d);font-size:.9em}
+.zslot .en{font-family:var(--f-num);font-weight:600;color:var(--ink-soft);font-size:.7em}
 .zhead{font-weight:900;font-size:17px;color:var(--ink-soft);letter-spacing:.06em}
 .homepics{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:620px}
 .homepics button{border:0;padding:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:13px}
@@ -276,7 +331,7 @@ button.tenrow{background:#DDF0E4}
 .walker.walking .wbody{animation:waddle .5s ease-in-out infinite}
 
 /* parents sheet */
-.sheet{position:fixed;inset:0;background:rgba(31,61,53,.45);display:grid;place-items:center;padding:16px;z-index:40;-webkit-user-select:text;user-select:text}
+.sheet{position:fixed;inset:0;background:rgba(58,46,110,.45);display:grid;place-items:center;padding:16px;z-index:40;-webkit-user-select:text;user-select:text}
 .sheet-in{background:var(--paper);border-radius:24px;padding:22px 22px 18px;width:100%;max-width:560px;max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.7}
 .sheet h2{margin:0;font-size:21px;font-weight:900;text-wrap:balance}
 .sheet h3{margin:0;font-size:13px;letter-spacing:.12em;color:var(--ink-soft)}
@@ -296,9 +351,18 @@ button.tenrow{background:#DDF0E4}
 .pic{display:flex;align-items:center;gap:10px}
 .pic img{width:48px;height:48px;border-radius:12px;object-fit:cover;flex:none}
 .pic input{flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:10px;border:2px solid var(--ground-2);background:#fff;color:var(--ink)}
+.profs{display:flex;flex-direction:column;gap:8px}
+.prof{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 10px}
+.prof .pdot{width:18px;height:18px;border-radius:50%}
+.prof input{min-width:0;font:inherit;font-weight:700;padding:8px 10px;border-radius:10px;border:2px solid var(--ground-2);background:#fff;color:var(--ink)}
+.prof .pstat{grid-column:2/-1;grid-row:2;font-size:13px;color:var(--ink-soft)}
+.prof .sbtn{grid-column:3;grid-row:1}
+.opts input.num{width:5.5em;height:auto;padding:6px 8px;font:inherit;font-weight:700;border-radius:10px;border:2px solid var(--ground-2);color:var(--ink);text-align:right}
+.needs{display:flex;flex-direction:column;gap:6px}
+.needs label{justify-content:space-between}
 .sheet-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between}
 .sbtn{border:0;border-radius:12px;padding:10px 16px;font-weight:700;background:var(--ground);font-size:15px;cursor:pointer;flex:none}
-.sbtn.danger{color:#A92F33}
+.sbtn.danger{color:var(--berry-d)}
 .sbtn.primary{background:var(--ink);color:#fff}
 .sbtn.add{align-self:flex-start;background:var(--leaf);color:#fff}
 .sbtn.add:focus-within{outline:4px solid var(--sky);outline-offset:2px}
@@ -316,15 +380,14 @@ button.tenrow{background:#DDF0E4}
 @keyframes blink{50%{opacity:.35}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes waddle{25%{transform:translateY(-6%) rotate(-4deg)}50%{transform:translateY(0)}75%{transform:translateY(-6%) rotate(4deg)}}
+@keyframes kglow2{40%{filter:drop-shadow(0 0 18px #FFD15C) brightness(1.15)}}
+@keyframes twinkle{50%{transform:scale(1.1);opacity:.85}}
+@keyframes march{to{stroke-dashoffset:-14}}
+@keyframes breathe{50%{transform:scale(1.03,.97) translateY(3px)}}
 @keyframes drift{from{translate:-120% 0}to{translate:520% 0}}
 @media (prefers-reduced-motion:reduce){
   .park-sky .cloud,.walker.walking .wbody{animation:none}
-  .owl,.rays,.balloon,.capsule svg,.cheer img,.trace .wg{stroke:var(--ground-2);stroke-width:14;opacity:.6;transition:stroke .4s,opacity .4s}
-.trace.help .wg{opacity:1}
-.trace.done .wg{stroke:var(--c);opacity:.35}
-.trace .gap{stroke:var(--sun);stroke-width:16;opacity:.85;animation:blink 1s ease-in-out infinite}
-.trace.write{max-height:min(44vh,400px)}
-.trace .dot{animation:none}
+  .kira,.gift svg,.guide-line line,.ev-rays,.ev-stars span,.zz span,.balloon,.trace .gap,.trace .dot{animation:none}
   .kstar,.play.big,.key.w.right,.key.w.wrong,
   .cell.tapped,.tenrow.tapped,.choice.right,.seq .q,.eq .q,.hint .q,.cell.hole.filled{animation:none}
   .groups,.grp,.plus{transition:none}
@@ -346,6 +409,6 @@ button.tenrow{background:#DDF0E4}
   .stone{width:44px;height:44px;font-size:23px}
   .mode .ic{font-size:34px}
   .mode{padding:6px 8px 4px}
-  .guide{padding-block:2px}
+  :root{--kira-h:clamp(140px,26vh,220px)}
   .stage{gap:10px}
 }

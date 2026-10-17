@@ -6,7 +6,7 @@
   2. python3 suuji-mori/make-voice.py        … 足りない音声だけ作る
      python3 suuji-mori/make-voice.py --all  … ぜんぶ作りなおす
 
-data.js・lines.js・glyphs.js を macOS の JavaScriptCore で動かして
+data.js・kira.js・lines.js・glyphs.js を macOS の JavaScriptCore で動かして
 allLines()（読み上げる日本語の1文 ぜんぶ）を取り出し、1文ずつ voice/<id>.m4a にする。
 最後に voice/clips.js（アプリが読む 音声の一覧とクレジット）を書く。
 声や話し方を変えたら 下の設定を書きかえて もう一度動かす（設定が変わると ぜんぶ作りなおす）。
@@ -33,7 +33,7 @@ ENGINE = 'http://127.0.0.1:50021'
 BITRATE = 40000  # AAC のビットレート
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SOURCES = [os.path.join(HERE, n) for n in ('data.js', 'lines.js', 'glyphs.js', 'nurie.js')]
+SOURCES = [os.path.join(HERE, n) for n in ('data.js', 'kira-config.js', 'kira.js', 'lines.js', 'glyphs.js', 'nurie.js')]
 OUT = os.path.join(HERE, 'voice')
 CLIPS_JS = os.path.join(OUT, 'clips.js')
 JSC = '/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc'

@@ -6,22 +6,32 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="style.css">
 
-<div class="app">
+<div class="app" id="app">
   <div class="bar">
     <button class="round-btn" id="homeBtn" aria-label="はじめのがめんへ" hidden>🏠</button>
-    <div class="stars" id="stars" aria-label="このかいのほし" hidden></div>
-    <div class="spacer" id="spacer"></div>
+    <button class="who-chip" id="whoChip" hidden></button>
+    <div class="spacer"></div>
+    <div class="jar" id="jar" aria-label="ほしの ビン" hidden></div>
     <button class="gear" id="gear" aria-label="おうちのかたへ（ながおし）">
       <svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"></circle></svg>
       おとな<br>ながおし
     </button>
   </div>
-  <div class="guide">
-    <button class="owl" id="owl" aria-label="もういちど きく">🦉</button>
-    <div class="bubble" id="bubble" aria-live="polite">なにして あそぶ？</div>
+  <div class="kira-area" id="kiraArea">
+    <div class="kbubble" id="kbubble" hidden></div>
+    <button class="kira" id="kira" aria-label="キラ"></button>
+    <svg class="guide-line" id="guideLine" aria-hidden="true" hidden><line></line></svg>
   </div>
-  <main class="stage" id="stage"></main>
+  <div class="board">
+    <div class="qbar">
+      <div class="bubble" id="bubble" aria-live="polite"></div>
+      <button class="hear-btn" id="hearBtn" aria-label="もういちど きく">🔊</button>
+    </div>
+    <main class="stage" id="stage"></main>
+  </div>
 </div>
+
+<div class="evolve" id="evolve" hidden></div>
 
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" id="sheetIn"></div>
@@ -29,6 +39,9 @@
 
 <script src="voice/clips.js"></script>
 <script src="data.js"></script>
+<script src="kira-config.js"></script>
+<script src="kira.js"></script>
+<script src="kira-art.js"></script>
 <script src="lines.js"></script>
 <script src="glyphs.js"></script>
 <script src="nurie.js"></script>
