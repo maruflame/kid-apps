@@ -72,6 +72,10 @@ const clipUrl = c => `voice/${clipId(c.ja)}.m4a`;
 const player = new Audio();
 // iPhone は さいしょの タップの中で いちど鳴らした audio でないと あとから鳴らせないので、無音を鳴らしておく
 document.addEventListener('pointerdown', () => { if (player.paused) { player.src = silentWav(); player.play().catch(() => {}); } }, { capture: true, once: true });
+// ブラウザの声も おなじ：日本語が 音声ファイルだと タップの中で いちども話さず、あとの 英語の なまえが 鳴らないので、無音で ひと言 話しておく
+if ('speechSynthesis' in window) document.addEventListener('pointerdown', () => {
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch(e) {}
+}, { capture: true, once: true });
 // 0.01秒の 無音の WAV
 function silentWav(){
   const n = 240, d = new DataView(new ArrayBuffer(44 + n*2)), txt = (o, s) => [...s].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
