@@ -1,16 +1,19 @@
-/* Meridian：画面と あそび（data.js・lines.js・glyphs.js のあとに読む） */
+/* Meridian：画面と あそび（data.js・kira-config.js・kira.js・kira-art.js・lines.js・glyphs.js のあとに読む） */
 (() => {
 const OPTKEY = 'suuji-mori-opt', PICKEY = 'suuji-mori-pics';
-const ROUND = 5, MAXPICS = 12;
+// プロフィールの一覧・キラの設定は みんなで 1つ。キラと 教科の記録は プロフィールごと（profileKey）
+const PROFKEY = 'suuji-mori-profiles', KIRAKEY = 'suuji-mori-kira', KSETKEY = 'suuji-mori-kira-settings';
+const MAXPICS = 12;
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const $ = s => document.querySelector(s);
-const stage = $('#stage'), bubble = $('#bubble'), starsEl = $('#stars'), homeBtn = $('#homeBtn'), spacer = $('#spacer');
+const stage = $('#stage'), bubble = $('#bubble'), homeBtn = $('#homeBtn'), appEl = $('#app');
+const jarEl = $('#jar'), whoChip = $('#whoChip'), kiraArea = $('#kiraArea'), kiraBtn = $('#kira'), kbubble = $('#kbubble'), evolveEl = $('#evolve');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- 保存 ---------- */
-// 声の設定とえらんだ教科は共通。なれ度・なかまは教科ごとに別々に保存
+// 声の設定とえらんだ教科は共通。なれ度・なかまは プロフィールごと・教科ごとに別々に保存
 // load は ok(値) が true のときだけ 値を返す（こわれた・古い形のデータは使わない）
 const load = (key, ok) => { try { const v = JSON.parse(localStorage.getItem(key)); return v && ok(v) ? v : null; } catch(e) { return null; } };
 const store = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch(e) { return false; } };
@@ -19,9 +22,17 @@ const savedOpt = load(OPTKEY, () => true);
 if (savedOpt) Object.assign(opt, savedOpt);
 else if (load(SUBJ.num.key, old => old.voice === false)) opt.voice = false;  // むかしは 声の設定を 記録といっしょに保存していた
 const saveOpt = () => store(OPTKEY, opt);
+let profiles = normalizeProfiles(load(PROFKEY, Array.isArray));
+const saveProfiles = () => store(PROFKEY, profiles);
+let me = profiles.find(p => p.id === opt.profile) || profiles[0];
+const pkey = base => profileKey(base, me.id);
+let ksaved = load(KSETKEY, v => typeof v === 'object') || {}, kcfg = kiraSettings(ksaved);
+const loadKiraOf = id => normalizeKira(load(profileKey(KIRAKEY, id), v => typeof v === 'object'));
+let kira = loadKiraOf(me.id);
+const saveKira = () => store(pkey(KIRAKEY), kira);
 const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), caught: {}, unlocked: S.start || 3, allOpen: false });
 let state;
-const save = () => store(S.key, state);
+const save = () => store(pkey(S.key), state);
 // むかしの「1〜10」と「11〜30」の記録を、1〜30 の記録に まとめる（まだ無いときに いちどだけ。むかしの記録は消さない）
 (function mergeOldNumbers(){
   if (load(SUBJ.num.key, () => true)) return;
@@ -38,11 +49,18 @@ const save = () => store(S.key, state);
 })();
 function useSubj(id){
   S = SUBJ[id] || SUBJ.num; opt.subj = S.id; saveOpt();
-  const saved = load(S.key, s => Array.isArray(s.lv) && s.lv.length === S.max+1);
+  const saved = load(pkey(S.key), s => Array.isArray(s.lv) && s.lv.length === S.max+1);
   state = Object.assign(fresh(), saved);
   delete state.voice;
   pendingNew = null; lastT = 0;
   if (!S.modes.some(m => m[0] === lastGame)) lastGame = hasMode('find')(S) ? 'find' : S.modes[0][0];
+}
+function useProfile(id){
+  me = profiles.find(p => p.id === id) || profiles[0];
+  opt.profile = me.id; saveOpt();
+  kira = loadKiraOf(me.id);
+  useSubj(opt.subj);
+  drawKira(); drawJar();
 }
 let pics = load(PICKEY, Array.isArray) || [];
 const savePics = () => store(PICKEY, pics);
@@ -209,15 +227,11 @@ function burst(el, n=18){
 const monSVG = (n, st) => drawMon(S.mon[n][1], S.color[n], st, S.dots && S.dots(n) ? n : S.label[n], S.mon[n][3]);
 const monLabel = n => `${S.mon[n][0]} <small class="en">${S.mon[n][2]}</small>`;
 const stars = st => '★'.repeat(st) + '☆'.repeat(3-st);
-const CAPSULE = `<svg viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="60" rx="34" ry="32" fill="#E7B04A"/><ellipse cx="38" cy="66" rx="8" ry="13" fill="#fff" opacity=".35"/>
-  <path d="M14 52 Q14 22 50 22 Q86 22 86 52 Q50 60 14 52Z" fill="#8A5A2B"/><circle cx="34" cy="38" r="3" fill="#6E4520"/><circle cx="50" cy="32" r="3" fill="#6E4520"/><circle cx="66" cy="38" r="3" fill="#6E4520"/><circle cx="42" cy="47" r="3" fill="#6E4520"/><circle cx="58" cy="47" r="3" fill="#6E4520"/>
-  <path d="M50 22 L52 9" stroke="#5B3A1A" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="70" r="7" fill="#fff" stroke="#8A5A2B" stroke-width="3"/></svg>`;
-
 /* ---------- まなびの しくみ ----------
    lv: 0〜3 の「なれ度」。1回目で正解 → +1、まちがえた → -1。
    出てくる数字は 1〜3 から。いま出ている数字がぜんぶ lv2 以上になったら次の数字が登場。
    にがてな数字ほど出やすく、なれるほど選択肢がふえる（2択→3択→4択）。
-   なれ度が上がるとモンスターが進化する（進化は下がらない）。 */
+   なれ度が上がるとモンスターが進化する（進化は下がらない）。こたえた数字・文字の モンスターは なかまに なる。 */
 let pendingNew = null, lastT = 0;
 const pool = () => range(1, state.allOpen ? S.max : state.unlocked);
 // ok：その遊びで出せる番号だけに しぼる（つぎは なに？は 3 から、書く遊びは 字形のある 1〜10 だけ）
@@ -237,10 +251,10 @@ function makeChoices(t){
   return shuffle([t, ...[...new Set(near), ...rest].slice(0, k-1)]);
 }
 function record(n, good){
+  // なれ度は 問題の えらびかた だけに使う（子どもには 見せない）。キラの星は へらない
   state.lv[n] = Math.max(0, Math.min(3, state.lv[n] + (good ? 1 : -1)));
-  round.hits.push(n);
   const st = state.lv[n] >= 3 ? 3 : state.lv[n] >= 2 ? 2 : 1;
-  if (st > state.evo[n]){ round.evolved.push({n, from: state.evo[n], to: st}); state.evo[n] = st; }
+  if (st > state.evo[n]) state.evo[n] = st;
   if (state.unlocked < S.max && range(1, state.unlocked).every(x => state.lv[x] >= (S.need || 2))){
     state.unlocked++; pendingNew = state.unlocked;
   }
@@ -251,7 +265,7 @@ const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITE
 /* ---------- がめん ---------- */
 const QUIZ = ['find','count','pair','next','key','name','ear'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
-let round = {done:0, hits:[], evolved:[]}, walkRaf = 0, walkers = [];
+let walkRaf = 0, walkers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 const wait = ms => new Promise(r => later(r, ms));
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; clearInterval(spawnTimer); spawnTimer = null; cancelAnimationFrame(walkRaf); walkRaf = 0; }
@@ -259,14 +273,20 @@ function setMode(m){
   clearTimers(); mode = m; token++;
   const game = GAMES.includes(m);
   if (game) lastGame = m;
-  starsEl.hidden = !game; spacer.hidden = game; homeBtn.hidden = m === 'home';
-  drawStars();
+  appEl.dataset.mode = game ? 'game' : m;
+  jarEl.hidden = !game && m !== 'home';
+  homeBtn.hidden = ['home', 'who', 'night'].includes(m);
+  whoChip.hidden = m !== 'home' || profiles.length < 2;
+  whoChip.innerHTML = `<span style="--c:${me.color}">${esc([...me.name][0] || '?')}</span>${esc(me.name)}`;
+  // あげていない星は へらさない：画面が かわるときは そのまま キラへ
+  gifts.slice().forEach(g => receive(g));
+  if (!game){ kiraFace(m === 'night' ? 'sleepy' : 'normal'); kiraSays(''); }
+  drawJar();
 }
-const newRound = () => { round = {done:0, hits:[], evolved:[]}; drawStars(); };
-function drawStars(){ starsEl.innerHTML = range(1,ROUND).map(i => `<span class="${i<=round.done?'on':''}">★</span>`).join(''); }
 const caughtCount = () => range(1,S.max).filter(n => state.caught[n]).length;
 
 function home(){
+  if (timeUp(kira, kcfg, Date.now())) return goodnight();
   setMode('home');
   const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
     + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
@@ -281,7 +301,14 @@ function home(){
       `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
       <button class="book-btn" data-go="hiroba">🌳 なかまの ひろば</button></div>`;
-  tell('home');
+  if (!greetNext) return tell('home');
+  // えらんだ あとの はじめの ホーム：ひさしぶりでも「おかえり！」と よろこぶだけ
+  greetNext = false;
+  const g = greeting(kira, Date.now());
+  kira.lastPlayedAt = Date.now(); saveKira();
+  kiraFace('happy'); kiraSays(g === 'okaeri' ? 'おかえり！' : 'あそぼう！');
+  later(() => kiraFace('normal'), 2500);
+  guide(LINE.home()[0], LINE[g === 'okaeri' ? 'okaeri' : 'hello']()[1] + ' ' + LINE.home()[1]);
 }
 
 function learn(n){ setMode('learn'); cur = n || pendingNew || pool().length; pendingNew = null; renderLearn(); }
@@ -382,21 +409,26 @@ function countTap(el){
 }
 
 // せいかい：ほめて 星をふやし、5つ たまったら ごほうび
+// せいかい：ほめて、大きな星を だす。キラに あげたら つぎへ（ms：ほめ言葉が おわるまでは つぎに いかない）
 function win(n, next, ms){
-  const praise = () => tell(mode === 'ten' ? 'rightTen' : ADDQ.includes(mode) ? 'rightAdd' : 'right', pick(PRAISE), n, mode);
+  const key = mode === 'ten' ? 'rightTen' : ADDQ.includes(mode) ? 'rightAdd' : 'right';
+  const praise = () => guide(...LINE[key](pick(PRAISE), n, mode), () => { if (giftsShown < 3 && gifts.some(g => g.big)) sayKira(LINE.giveStar()[1]); });
   // おとあて：さきに その音を きかせてから ほめる
   mode === 'ear' ? later(praise, 900) : praise();
-  round.done++; drawStars();
-  later(() => round.done >= ROUND ? reward() : next(), ms);
+  // なかまは こたえると しぜんに ふえる（ずかん・ひろば）
+  if (!state.caught[n]){ state.caught[n] = true; save(); }
+  kiraFace('happy');
+  starTime(next, Date.now() + ms);
 }
-function startQuiz(kind){ setMode(kind); newRound(); nextQ(); }
+function startQuiz(kind){ setMode(kind); nextQ(); }
 function nextQ(){
+  ask();
   const t = pickTarget(mode === 'next' ? n => S.val(n) >= 3 : undefined); q = {t, miss:0, over:false};
   reshift();
   const lab = mode === 'pair' ? S.lower : S.label;
   const btns = makeChoices(t).map(n => `<button class="choice" data-ans="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${S.flags ? flagSVG(S.color[n]) + `<span>${lab[n]}</span>` : lab[n]}</button>`).join('');
   if (mode === 'key'){
-    stage.innerHTML = `<button class="hear" id="hear">🔊 もういちど きく</button><div class="card count-card">${keyboard({ ans: true })}</div>`;
+    stage.innerHTML = `<div class="card count-card">${keyboard({ ans: true })}</div>`;
     tell('keyFind', t);
   } else if (mode === 'name'){
     // ★は その音の 白鍵（ド は 下か 上の どちらか）
@@ -408,7 +440,7 @@ function nextQ(){
     stage.innerHTML = `<button class="play big" data-play="q" aria-label="もういちど きく">🔊</button><div class="choices ${S.flags ? 'flags' : 'notes'}">${btns}</div>`;
     tellThen(playQ, 'ear');
   } else if (mode === 'find'){
-    stage.innerHTML = `<button class="hear" id="hear">🔊 もういちど きく</button><div class="choices">${btns}</div>`;
+    stage.innerHTML = `<div class="choices">${btns}</div>`;
     tell('find', t);
   } else if (mode === 'pair'){
     // 問題の文字は黒にして、色で こたえが わからないようにする
@@ -437,7 +469,7 @@ function answer(n, el){
     win(n, nextQ, mode === 'ear' ? 2800 : 1700);
   } else {
     // まちがいは やさしく：その数字の なまえを おしえて、もう一度
-    q.miss++; boop();
+    q.miss++; boop(); tried();
     el.classList.add('wrong'); el.disabled = true;
     if (mode === 'count') tell('wrongCount', S.val(n));
     else if (mode === 'ear') tellThen(playQ, 'wrongEar', n);  // もういちど おなじ音
@@ -466,8 +498,9 @@ function numChoices(v, t, hi){
   return shuffle([v, ...near, ...rest].slice(0, k));
 }
 const TENS = range(1, SUBJ.add.max).filter(n => SUBJ.add.val(n) === 10);
-function startAdd(kind){ setMode(kind); newRound(); nextAdd(); }
+function startAdd(kind){ setMode(kind); nextAdd(); }
 function nextAdd(){
+  ask();
   const t = pickTarget(undefined, mode === 'ten' ? TENS : pool()), [a, b] = S.fact[t];
   q = {t, ans: mode === 'ten' ? b : a + b, miss:0, over:false};
   counted = mode === 'fueru' ? a : 0;
@@ -515,16 +548,16 @@ function answerAdd(v, el){
     stage.querySelectorAll('.hole').forEach((h, i) => { h.disabled = true; later(() => { h.innerHTML = '⭐'; h.classList.add('filled'); tone(note(10 - q.ans + i + 1), 0, .15, 'triangle', .1); }, i * 120); });
     win(q.t, nextAdd, 2200);
   } else {
-    q.miss++; boop();
+    q.miss++; boop(); tried();
     el.classList.add('wrong'); el.disabled = true;
     tell(mode === 'ten' ? 'wrongTen' : 'wrongAdd', v);
     if (q.miss >= 2) stage.querySelector(`[data-ans="${q.ans}"]`).classList.add('glow');
   }
 }
 
-function balloon(){ setMode('balloon'); newRound(); nextBalloon(); }
+function balloon(){ setMode('balloon'); nextBalloon(); }
 function nextBalloon(){
-  clearTimers();
+  clearTimers(); ask();
   const t = pickTarget(); q = {t, miss:0, hit:0, over:false};
   stage.innerHTML = `<div class="goal"><span class="goal-num">${S.label[t]}</span><span class="goal-dots">${'<i></i>'.repeat(3)}</span></div><div class="sky" id="sky"></div>`;
   tell('balloon', t);
@@ -557,7 +590,7 @@ function popBalloon(b){
       win(q.t, nextBalloon, 1800);
     } else say(V(n));
   } else {
-    q.miss++; boop();
+    q.miss++; boop(); tried();
     b.animate([{transform:'rotate(0)'},{transform:'rotate(-18deg)'},{transform:'rotate(18deg)'},{transform:'rotate(0)'}],{duration:400});
     tell('is', n);
   }
@@ -566,7 +599,7 @@ function popBalloon(b){
 /* ---------- なぞりがき ----------
    いまの画の 緑の丸から なぞる。手本の線から はずれすぎなければ 進み、指をはなしても 進みは のこる。
    なぞった分だけ 手本の線に色がつく（指の線そのものではないので ガタガタでも きれいに見える）。
-   ガイドつきで かならず できるので なれ度は 上げ下げせず、ごほうびの候補にだけ入れる。 */
+   ガイドつきで かならず できるので なれ度は 上げ下げしない。 */
 const TOL = 16, AHEAD = 8;
 let tr = null;
 const ptsAttr = p => p.map(([x,y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
@@ -577,8 +610,9 @@ function pickTrace(){
   if (!traceDeck.length) traceDeck = shuffle(range(1, S.max).filter(n => n !== lastT && S.glyph(n)));
   return lastT = traceDeck.pop();
 }
-function trace(){ setMode('trace'); newRound(); traceDeck = []; nextTrace(); }
+function trace(){ setMode('trace'); traceDeck = []; nextTrace(); }
 function nextTrace(){
+  ask();
   const t = pickTrace(), g = S.glyph(t), w = g.w || 100;
   q = {t, over:false};
   tr = { strokes: (g.s || g).map(strokePts), si:0, idx:0, on:false };
@@ -636,7 +670,7 @@ function strokeDone(){
   q.over = true; drawTrace();
   chime(); burst(svg, 24);
   svg.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:500});
-  round.hits.push(n);  // なぞりがきは なれ度を変えず、ごほうびの候補にだけ入れる
+  // なぞりがきは なれ度を変えない
   win(n, nextTrace, 1800);
 }
 
@@ -647,7 +681,7 @@ function strokeDone(){
    ・書いた点のうち 同じ向きの手本が W_HIT 以内にある わりあい：90% 以上、長さも 手本の2倍まで（ぐちゃぐちゃ塗りは ×）
    ぜんたいが すこし ずれて書いていても いいように、書いた線を 手本に いちばん合う所まで（W_SHIFT まで）ずらしてから くらべる。
    指をはなして すこし待ち、書けていれば 自動で せいかい。「できた！」で その場で判定し、だめなら どこが だめかを 見せる。
-   なぞりがきと同じく なれ度は 上げ下げせず、ごほうびの候補にだけ入れる。 */
+   なぞりがきと同じく なれ度は 上げ下げしない。 */
 const W_HIT = 11, W_ANG = Math.PI / 6, W_SHIFT = 5, W_WAIT = 900;
 let wr = null;
 // 書いた線を 2 ずつの点に（すばやく書くと 点が とびとびになるので）
@@ -681,8 +715,9 @@ function bestShift(tpl, ink){
   }
   return [dx, dy];
 }
-function write(){ setMode('write'); newRound(); nextWrite(); }
+function write(){ setMode('write'); nextWrite(); }
 function nextWrite(){
+  ask();
   const t = pickTarget(n => !!S.glyph(n)), g = S.glyph(t), w = g.w || 100, gd = (g.s || g).map(strokePts);
   q = {t, miss:0, over:false};
   wr = { gd, ink: [], cur: null, gen: 0, len: pathLen(gd) };
@@ -740,7 +775,7 @@ function writeDone(){
   wr.gen++;
   const j = judge(), svg = $('#wsvg');
   if (j.ok) return writeOk();
-  q.miss++; boop();
+  q.miss++; boop(); tried();
   svg.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}], {duration:350});
   // 2回まちがえたら 手本を こくする
   if (q.miss >= 2) svg.classList.add('help');
@@ -761,85 +796,213 @@ function writeOk(){
   svg.classList.add('done');
   chime(); burst(svg, 24);
   svg.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:500});
-  round.hits.push(n);
   win(n, nextWrite, 1800);
 }
 
-/* ---------- ごほうび：なかまに する ---------- */
-let rw = null;
-function reward(){
-  setMode('reward'); reshift();
-  const hits = [...new Set(round.hits)];
-  const pool2 = hits.length ? hits : pool();
-  const fresh2 = pool2.filter(n => !state.caught[n]);
-  const n = fresh2.length ? pick(fresh2) : pick(pool2);
-  const isNew = !state.caught[n];
-  rw = { n, tok: token, evolved: round.evolved.filter(e => state.caught[e.n] && e.n !== n), nn: pendingNew };
-  pendingNew = null;
-  const pic = pics.length ? pick(pics) : null;
-  stage.innerHTML = `
-    <div class="prize"><div class="rays"></div><div class="monwrap" id="mon">${monSVG(n, state.evo[n])}</div></div>
-    <div class="mon-name" id="monName">${monLabel(n)} <span class="st">${stars(state.evo[n])}</span></div>
-    ${isNew ? `<button class="capsule" id="capsule" aria-label="カプセルを なげる">${CAPSULE}タップ！</button>` : ''}
-    <div class="after" id="after" hidden>
-      ${pic ? `<div class="cheer"><img src="${pic.src}" alt=""><span>${pic.name ? esc(pic.name) + 'も ' : ''}よろこんでるよ！</span></div>` : ''}
-      ${rw.nn ? `<button class="newnum" data-learn="${rw.nn}" style="--c:${S.color[rw.nn]}"><span>${S.label[rw.nn]}</span>あたらしい ${S.name}！</button>` : ''}
-      <div class="row"><button class="pill" data-go="again">もういっかい</button><button class="pill alt" data-go="book">ずかん</button></div>
-    </div>`;
-  chime();
-  if (isNew) tell('monNew', n);
-  else { tell('monVisit', n); afterCatch(); }
+/* ---------- キラ（え は kira-art.js、そだつ しくみ は kira.js） ----------
+   せいかい → 大きな星、まちがい → 小さな「がんばったほし」（1もんに 1こ）。星は キラまで ドラッグ か タップで とんでいく。
+   星が ビンに たまって 必要数に とどいたら へんしん。1日の 時間を こえたら 問題の 区切りで ねむくなって おやすみ。 */
+let kface = 'normal', gifts = [], giftsShown = 0, greetNext = false, saidNew = null;
+const drawKira = () => { kiraBtn.innerHTML = kiraArt(kira.stage, kface, kira.maneColors); };
+function kiraFace(f){ if (f !== kface){ kface = f; drawKira(); } }
+function kiraSays(t){ kbubble.textContent = t; kbubble.hidden = !t; }
+// キラの ひとこと：「もういちど きく」で くりかえすのは 問題文の まま
+const sayKira = t => { const keep = lastSpoken; say(t); lastSpoken = keep; };
+// アニメーションの おわりを まつ（画面が うしろに あって 止まっていても ms で さきへ すすむ）
+const animDone = (a, ms) => Promise.race([a.finished.catch(() => {}), new Promise(r => setTimeout(r, ms))]);
+const kiraHop = () => !reduce && kiraBtn.animate([{transform:'translateY(0)'},{transform:'translateY(-14px) scale(1.05)'},{transform:'translateY(0)'}], {duration:420, easing:'ease-out'});
+// 問題を だすとき
+function ask(){ kiraFace('thinking'); kiraSays(''); }
+
+const JAR = r => `<svg viewBox="0 0 40 48" aria-hidden="true"><rect x="12" y="2" width="16" height="7" rx="3" fill="#C9A8F5"/>
+  <path d="M10 10 H30 Q36 14 36 22 V40 Q36 46 30 46 H10 Q4 46 4 40 V22 Q4 14 10 10Z" fill="#fff" stroke="#C9A8F5" stroke-width="3"/>
+  <clipPath id="jarIn"><path d="M10 12 H30 Q34 15 34 22 V40 Q34 44 30 44 H10 Q6 44 6 40 V22 Q6 15 10 12Z"/></clipPath>
+  <rect x="4" y="${(44 - 32 * r).toFixed(1)}" width="32" height="${(32 * r).toFixed(1)}" fill="#FFD15C" clip-path="url(#jarIn)"/>
+  ${kStar(20, 30, 7, '#fff')}</svg>`;
+// ビン と 丸5つ（数字は 出さない。たまった わりあいを 丸の ぬりで）
+function drawJar(bump){
+  const fr = jarDots(kira, kcfg);
+  jarEl.innerHTML = `<span class="jar-ic">${JAR(fr.reduce((a, b) => a + b, 0) / fr.length)}</span>`
+    + fr.map(f => `<i style="--f:${(f * 100).toFixed(0)}%"></i>`).join('');
+  if (bump && !reduce) jarEl.animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}], {duration:400});
 }
-async function throwCapsule(){
-  const {n, tok} = rw, cap = $('#capsule'), mon = $('#mon');
-  if (!cap || cap.disabled) return;
-  cap.disabled = true;
-  const a = cap.getBoundingClientRect(), b = mon.getBoundingClientRect();
-  const dx = b.left + b.width/2 - (a.left + a.width/2), dy = b.top + b.height/2 - (a.top + a.height/2);
-  const at = r => `translate(${dx}px,${dy}px) rotate(${r}deg)`;
-  tone(400,0,.4,'sine',.08); tone(800,.1,.3,'sine',.06);
-  await cap.animate([{transform:'translate(0,0) rotate(0)'},{transform:at(720)}],{duration:600,easing:'cubic-bezier(.3,.6,.4,1)',fill:'forwards'}).finished;
+
+// 星を だす。キラに とどいたら resolve（かえす値：へんしん { from, to } | null）
+function makeGift(big){
+  const el = document.createElement('button');
+  el.className = 'gift ' + (big ? 'big' : 'small');
+  el.setAttribute('aria-label', big ? 'ほし。キラに あげる' : 'がんばったほし。キラに あげる');
+  el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${kStar(50, 53, 46)}</svg>`;
+  kiraArea.appendChild(el);
+  const g = { el, big };
+  const p = new Promise(r => g.resolve = r);
+  gifts.push(g);
+  if (big) giftsShown++;
+  if (!reduce) el.animate([{transform:'scale(0) rotate(-120deg)'},{transform:'scale(1.15) rotate(0)'},{transform:'scale(1)'}], {duration:500, easing:'ease-out'});
+  big ? tone(1047, 0, .2, 'triangle', .12) : tone(880, 0, .12, 'triangle', .07);
+  drawGuide();
+  el.addEventListener('pointerdown', e => dragGift(g, e));
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fly(g); } });
+  return p;
+}
+const center = r => [r.left + r.width / 2, r.top + r.height / 2];
+// 大きな星から キラへの 点線
+function drawGuide(){
+  const svg = $('#guideLine'), g = gifts.find(x => x.big && !x.flying);
+  svg.hidden = !g;
+  if (!g) return;
+  const base = kiraArea.getBoundingClientRect(), [x1, y1] = center(g.el.getBoundingClientRect()), [x2, y2] = center(kiraBtn.getBoundingClientRect());
+  const ln = svg.querySelector('line'), k = .78;
+  ln.setAttribute('x1', x1 - base.left); ln.setAttribute('y1', y1 - base.top);
+  ln.setAttribute('x2', x1 + (x2 - x1) * k - base.left); ln.setAttribute('y2', y1 + (y2 - y1) * k - base.top);
+}
+// ゆびで ひっぱる。ちょっとしか うごかなければ タップ（そのまま とんでいく）
+function dragGift(g, e){
+  if (g.flying) return;
+  e.preventDefault();
+  const el = g.el, [sx, sy] = [e.clientX, e.clientY];
+  let dx = 0, dy = 0, moved = false;
+  try { el.setPointerCapture(e.pointerId); } catch(err) {}
+  el.classList.add('held');
+  const move = ev => { dx = ev.clientX - sx; dy = ev.clientY - sy; if (Math.hypot(dx, dy) > 10) moved = true; el.style.translate = `${dx}px ${dy}px`; };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    el.classList.remove('held');
+    const k = kiraBtn.getBoundingClientRect(), [cx, cy] = center(el.getBoundingClientRect()), pad = 40;
+    const onKira = cx > k.left - pad && cx < k.right + pad && cy > k.top - pad && cy < k.bottom + pad;
+    if (!moved || onKira) return fly(g);
+    // とどかなかったら もとの ばしょへ（なんども ためせる）
+    el.animate([{translate: `${dx}px ${dy}px`}, {translate: '0 0'}], {duration: 300, easing: 'ease-out'});
+    el.style.translate = '';
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+async function fly(g){
+  if (g.flying) return;
+  g.flying = true; drawGuide();
+  const el = g.el, [x1, y1] = center(el.getBoundingClientRect()), [x2, y2] = center(kiraBtn.getBoundingClientRect());
+  const t0 = el.style.translate || '0px 0px', [ox, oy] = t0.split(' ').map(v => parseFloat(v) || 0);
+  tone(1319, 0, .12, 'sine', .08); tone(1760, .1, .15, 'sine', .07);
+  if (!reduce) await animDone(el.animate([{translate: `${ox}px ${oy}px`, scale: 1}, {translate: `${ox + x2 - x1}px ${oy + y2 - y1}px`, scale: .3}],
+    {duration: 520, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards'}), 700);
+  receive(g);
+}
+// 星が キラに とどいた（画面が かわるときは とばさずに ここへ）
+function receive(g){
+  if (!gifts.includes(g)) return;
+  gifts = gifts.filter(x => x !== g);
+  g.el.remove(); drawGuide();
+  const r = giveStars(kira, g.big ? kcfg.starForCorrect : kcfg.starForTry, kcfg, Date.now());
+  kira = r.kira; saveKira();
+  drawJar(true);
+  kiraFace('happy'); kiraHop();
+  kiraBtn.classList.remove('glow'); void kiraBtn.offsetWidth; kiraBtn.classList.add('glow');
+  sparkle();
+  if (!g.big) later(() => { if (q && !q.over) kiraFace('thinking'); }, 1200);
+  // せいかいの 星の へんしんは starTime が みせる。それ以外（がんばったほし・画面が かわった）は ここで
+  if (r.evolved && (!g.big || !GAMES.includes(mode))) showEvolve(r.evolved);
+  g.resolve(r.evolved);
+}
+
+// まちがえた：がんばったほし（1もんに 1こ）。こまり顔は すこしだけ
+function tried(){
+  if (!q || q.tried) return;
+  q.tried = true;
+  kiraFace('oshii'); kiraSays('がんばったほし！');
+  later(() => { if (q && !q.over) kiraFace('thinking'); }, 1600);
+  makeGift(false);
+}
+
+// せいかいの あと：大きな星を キラへ → ありがとう → (教科クリア) → (へんしん) → つぎ か おやすみ
+async function starTime(next, until){
+  const tok = token;
+  gifts.filter(g => !g.big).forEach(fly);  // のこっている がんばったほしは さきに とんでいく
+  kiraSays('ほしを ちょうだい！');
+  const nag = n => later(() => {  // なかなか あげないときは やさしく さそう（3回まで）
+    if (tok !== token || !gifts.some(g => g.big)) return;
+    kiraSays('ほしを ちょうだい！'); kiraHop(); sayKira(LINE.giveStar()[1]);
+    gifts.filter(g => g.big).forEach(g => !reduce && g.el.animate([{rotate:'0deg'},{rotate:'-14deg'},{rotate:'14deg'},{rotate:'0deg'}], {duration:500}));
+    if (n < 3) nag(n + 1);
+  }, 8000);
+  nag(1);
+  const evolved = await makeGift(true);
   if (tok !== token) return;
-  await mon.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.1)',opacity:0}],{duration:350,fill:'forwards'}).finished;
-  for (let i=0;i<3;i++){
-    if (tok !== token) return;
-    tone(520,0,.08,'square',.05);
-    await cap.animate([{transform:at(0)},{transform:at(-22)},{transform:at(22)},{transform:at(0)}],{duration:420}).finished;
-    await wait(220);
+  kiraSays('ありがとう！');  // ほめ言葉を さえぎらないよう 声は 出さない
+  await wait(Math.max(900, until - Date.now()));
+  if (topicCleared(state.lv, S.max, kcfg.topicClearLevel)){
+    const r = clearTopic(kira, S.id, kcfg);
+    kira = r.kira; saveKira();
+    if (r.mane){ drawKira(); kiraHop(); sparkle(); kiraSays('あたらしい いろ！'); tell('mane'); await wait(2800); if (tok !== token) return; }
   }
-  if (tok !== token) return;
-  state.caught[n] = true; save();
-  fanfare(); burst(mon, 36);
-  cap.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'});
-  mon.animate([{transform:'scale(.1)',opacity:0},{transform:'scale(1.12)',opacity:1},{transform:'scale(1)',opacity:1}],{duration:600,fill:'forwards'});
-  tell('caught', n);
-  await wait(900);
-  cap.remove();
-  afterCatch();
+  if (evolved) return showEvolve(evolved, () => tok === token && afterQ(next));
+  afterQ(next);
 }
-async function afterCatch(){
-  const {tok} = rw;
-  for (const e of rw.evolved){
-    await wait(2400);
-    if (tok !== token) return;
-    const mon = $('#mon'), name = monLabel(e.n);
-    mon.getAnimations().forEach(a => a.cancel());
-    mon.innerHTML = monSVG(e.n, e.from);
-    $('#monName').innerHTML = `${name} <span class="st">${stars(e.from)}</span>`;
-    tell('glow', e.n);
-    await mon.animate([{filter:'brightness(1)'},{filter:'brightness(4)'},{filter:'brightness(1)'},{filter:'brightness(4)'},{filter:'brightness(1)'},{filter:'brightness(5)'}],{duration:2000}).finished;
-    if (tok !== token) return;
-    mon.innerHTML = monSVG(e.n, e.to);
-    $('#monName').innerHTML = `${name} <span class="st">${stars(e.to)}</span>`;
-    mon.animate([{filter:'brightness(5)',transform:'scale(.9)'},{filter:'brightness(1)',transform:'scale(1)'}],{duration:500});
-    sparkle(); burst(mon, 40);
-    tell('evolved', e.n);
-  }
-  await wait(rw.evolved.length ? 1600 : 400);
-  if (tok !== token) return;
-  $('#after').hidden = false;
-  if (rw.nn) { await wait(1800); if (tok === token) tell('newOne', rw.nn); }
+function afterQ(next){
+  if (timeUp(kira, kcfg, Date.now())) return goodnight();
+  if (pendingNew && pendingNew !== saidNew){ saidNew = pendingNew; tell('newOne', pendingNew); return later(next, 2600); }
+  next();
 }
+
+// へんしん：まえの すがた → ひかり → あたらしい すがた（2〜3秒）。「やったね！」で もどる
+let evGen = 0;
+async function showEvolve({ from, to }, done){
+  const gen = ++evGen;
+  evolveEl.innerHTML = `<div class="ev-rays" aria-hidden="true"></div>
+    <div class="ev-stars" aria-hidden="true">${range(1, 14).map(i => `<span style="--x:${(i * 37) % 100}%;--y:${(i * 61) % 100}%;--c:${['#F7B6D2','#C9A8F5','#9ECFF5','#FFD15C'][i % 4]};--d:${(i % 5) * .4}s">★</span>`).join('')}</div>
+    <h2 class="ev-title">へんしん！</h2>
+    <div class="ev-frame" id="evFrame">${kiraArt(from, 'normal', [])}</div>
+    <div class="ev-card" id="evCard"><span class="ev-jar">${JAR(1)}</span><p>ほしの ビンが いっぱい！<br>キラが ${KIRA_STAGES[to].become}</p></div>
+    <button class="ev-btn" id="evBtn">やったね！</button>`;
+  evolveEl.hidden = false;
+  const frame = $('#evFrame'), card = $('#evCard'), btn = $('#evBtn');
+  card.style.visibility = btn.style.visibility = 'hidden';
+  btn.onclick = () => { evolveEl.hidden = true; evolveEl.innerHTML = ''; drawKira(); kiraFace('happy'); done && done(); };
+  stopVoice(); fanfare();
+  if (!reduce) await animDone(frame.animate([{filter:'brightness(1)'},{filter:'brightness(3)'},{filter:'brightness(1.2)'},{filter:'brightness(4)'},{filter:'brightness(1.5)'},{filter:'brightness(6)', transform:'scale(1.1)'}],
+    {duration: 1700, easing: 'ease-in'}), 1900);
+  if (gen !== evGen) return;
+  frame.innerHTML = kiraArt(to, 'happy', kira.maneColors);
+  if (!reduce) frame.animate([{filter:'brightness(6)', transform:'scale(.8)'},{filter:'brightness(1)', transform:'scale(1.06)'},{transform:'scale(1)'}], {duration: 700, easing: 'ease-out'});
+  sparkle(); burst(frame, 40);
+  await new Promise(r => setTimeout(r, 700));
+  if (gen !== evGen) return;
+  card.style.visibility = btn.style.visibility = '';
+  say(LINE.evolve(to)[1]);
+  btn.focus({ preventScroll: true });
+}
+
+// じかんが おわった：ねむい… → おやすみ（またあした。かなしい演出は しない）
+function goodnight(){
+  setMode('night');
+  kiraSays('ねむい…');
+  stage.innerHTML = `<div class="night"><div class="moon" aria-hidden="true"></div>
+    <div class="zz" aria-hidden="true">${range(1, 7).map(i => `<span style="--x:${(i * 29) % 100}%;--y:${(i * 47) % 100}%;--d:${i * .3}s">✦</span>`).join('')}</div>
+    ${profiles.length > 1 ? `<button class="pill alt" data-go="who">👤 ほかの こ</button>` : ''}</div>`;
+  appEl.classList.remove('sleeping'); void appEl.offsetWidth;
+  tellThen(() => { if (mode !== 'night') return; appEl.classList.add('sleeping'); kiraSays('Zz…'); tell('night'); }, 'sleepy');
+}
+// だれが あそぶ？（ほかの子の 進みぐあいは 出さない）
+function who(){
+  setMode('who');
+  stage.innerHTML = `<div class="who">${profiles.map(p =>
+    `<button class="who-btn" data-who="${p.id}" style="--c:${p.color}"><span class="who-ic">${esc([...p.name][0] || '?')}</span>${esc(p.name)}</button>`).join('')}</div>`;
+  tell('who');
+}
+kiraBtn.addEventListener('click', () => {
+  kiraHop(); tone(988, 0, .15, 'triangle', .1);
+  gifts.forEach(fly);  // キラを さわっても 星は とんでくる
+});
+window.addEventListener('resize', drawGuide);
+
+// あそんだ 時間（画面が 見えている あいだ。おやすみ・だれが あそぶ？・おうちのかたの画面は かぞえない）
+let tickAt = Date.now();
+setInterval(() => {
+  const now = Date.now(), dt = Math.min(now - tickAt, 15000);
+  tickAt = now;
+  if (document.hidden || !sheet.hidden || mode === 'night' || mode === 'who') return;
+  kira = addPlayTime(kira, dt, now); saveKira();
+}, 5000);
+document.addEventListener('visibilitychange', () => { tickAt = Date.now(); });
 
 function book(){
   setMode('book');
@@ -969,9 +1132,11 @@ function resetNurie(btn){
   nu[pic] = {}; store(NURIEKEY, nu); boop(); openPic(pic);
 }
 
-const GO = { home, learn: () => learn(), balloon, trace, write, book, hiroba, nurie, again: () => GO[lastGame]() };
+const GO = { home, who, learn: () => learn(), balloon, trace, write, book, hiroba, nurie };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 ADDQ.forEach(k => GO[k] = () => startAdd(k));
+// じかんが おわっていたら あそびは はじめず おやすみ
+GAMES.forEach(k => { const f = GO[k]; GO[k] = () => timeUp(kira, kcfg, Date.now()) ? goodnight() : f(); });
 
 stage.addEventListener('click', e => {
   const part = mode === 'nurie' && e.target.closest('.part'); if (part) return paint(part);
@@ -990,7 +1155,7 @@ stage.addEventListener('click', e => {
   if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : writeClear();
   if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
-  if (el.id === 'capsule') return throwCapsule();
+  if (el.dataset.who){ useProfile(el.dataset.who); tone(784,0,.15,'triangle',.12); greetNext = true; return home(); }
   if (el.dataset.hi) return tapWalker(el);
   if (el.dataset.mon){
     const n = +el.dataset.mon;
@@ -1004,7 +1169,6 @@ stage.addEventListener('click', e => {
     return;
   }
   if (el.dataset.n){ const n = +el.dataset.n; tapSay(el, V(n), n); }
-  if (el.id === 'hear') say(lastSpoken);
 });
 stage.addEventListener('pointerdown', e => {
   const b = e.target.closest('.balloon'); if (b) { e.preventDefault(); popBalloon(b); }
@@ -1020,7 +1184,8 @@ stage.addEventListener('pointermove', e => {
   if (mode === 'write' && wr && wr.cur) writeUp();
 }));
 homeBtn.addEventListener('click', home);
-$('#owl').addEventListener('click', () => say(lastSpoken));
+whoChip.addEventListener('click', who);
+$('#hearBtn').addEventListener('click', e => { bounce(e.currentTarget, 1.1); say(lastSpoken); });
 
 /* ---------- おうちのかたへ（ながおしで ひらく） ---------- */
 const gear = $('#gear'), sheet = $('#sheet'), sheetIn = $('#sheetIn');
@@ -1035,7 +1200,8 @@ function openSheet(){
   const open = pool().length;
   sheetIn.innerHTML = `
     <h2 id="sheetTitle">おうちのかたへ</h2>
-    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はそれぞれ別に残ります。以下は いま選んでいる「${S.name}」についてです。</p>
+    ${kiraSheet()}
+    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はプロフィールごと・教科ごとに別に残ります。以下は いま あそんでいる「${esc(me.name)}」の「${S.name}」についてです。</p>
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>
@@ -1043,7 +1209,7 @@ function openSheet(){
       <span class="bar-v"><i style="height:${state.lv[n]/3*100}%"></i></span>${S.label[n]}</div>`).join('')}</div>
     <div class="legend">出ている${S.unit}：${S.pitch ? range(1, open).map(n => S.label[n]).join('・') : `${S.label[1]}〜${S.label[open]}`}　／　なかま ${caughtCount()}ひき</div>
     <h3>おうちの なかま（すきな画像）</h3>
-    <p class="legend">選んだ画像は「かぞえる絵」とごほうび画面に出ます。名前を入れると読み上げます（ひらがながおすすめ）。画像はこの端末のブラウザの中だけに保存され、どこにも送られません。最大${MAXPICS}枚。</p>
+    <p class="legend">選んだ画像は「かぞえる絵」と ずかんに出ます（みんなで共通）。名前を入れると読み上げます（ひらがながおすすめ）。画像はこの端末のブラウザの中だけに保存され、どこにも送られません。最大${MAXPICS}枚。</p>
     <div class="pics">${pics.map(p => `<div class="pic"><img src="${p.src}" alt="">
       <input id="pn-${p.id}" data-pid="${p.id}" value="${esc(p.name)}" placeholder="なまえ（れい：ぴかちゅう）" maxlength="12" aria-label="なまえ">
       <button class="sbtn danger" data-del="${p.id}">けす</button></div>`).join('')}</div>
@@ -1061,7 +1227,7 @@ function openSheet(){
     <p class="legend">名前に「Natural」「拡張」「プレミアム」「Enhanced」とつく声ほど自然です（おまかせ だと自動でえらびます）。どれも無料：パソコンは Microsoft Edge で開くと「Nanami Online (Natural)」が使えます。iPhone・iPad・Mac は 設定 →アクセシビリティ →読み上げコンテンツ →声 →日本語 から「Kyoko（拡張）」などを追加できます。${CLIPS.size ? 'ずんだもんの声で読むときも、英語と おうちの画像の名前は ここで選んだ声で読みます。' : ''}</p>
     ${VOICE.credit ? `<p class="legend">音声：${esc(VOICE.credit)}</p>` : ''}
     <div class="sheet-actions">
-      <button class="sbtn danger" id="reset">「${S.name}」の記録をリセット</button>
+      <button class="sbtn danger" id="reset">${esc(me.name)}の「${S.name}」の記録をリセット</button>
       <button class="sbtn primary" id="closeSheet">とじる</button>
     </div>`;
   picMsg = '';
@@ -1071,7 +1237,38 @@ const voiceOpts = (vs, cur) => `<option value="">おまかせ</option>` + vs
   .sort((a,b) => isNat(b) - isNat(a) || a.name.localeCompare(b.name))
   .map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${isNat(v) ? '★ ' : ''}${esc(v.name)}</option>`).join('');
 const trySay = () => sayLine('tryIt');
-function closeSheet(){ sheet.hidden = true; if (mode === 'home') home(); else if (mode === 'book') book(); }
+function closeSheet(){
+  sheet.hidden = true;
+  drawKira(); drawJar();
+  // 時間を のばしたら おやすみから もどれる／ちぢめたら ホームで おやすみ
+  if (mode === 'home' || mode === 'night') home(); else if (mode === 'book') book(); else if (mode === 'who') who();
+}
+/* キラ と プロフィール：キラの段階・星の数は ここでだけ 見せる（子どもの画面には 出さない・くらべない） */
+function kiraSheet(){
+  const now = Date.now(), L = KIRA_CONFIG.limits;
+  const rows = profiles.map(p => {
+    const k = p.id === me.id ? kira : loadKiraOf(p.id);
+    return `<div class="prof"><span class="pdot" style="background:${p.color}"></span>
+      <input data-pname="${p.id}" value="${esc(p.name)}" maxlength="12" aria-label="なまえ">
+      <span class="pstat">${KIRA_STAGES[k.stage].name}（${k.stage}/${KIRA_FINAL}）・今週 ${weekStars(k, now)}こ・ぜんぶ ${k.totalStars}こ・きょう ${Math.floor(playedToday(k, now) / 60000)}分${k.stage === KIRA_FINAL ? `・たてがみ ${k.maneColors.length}色` : ''}</span>
+      ${profiles.length > 1 ? `<button class="sbtn danger" data-pdel="${p.id}">けす</button>` : ''}</div>`;
+  }).join('');
+  return `<h3>キラ と プロフィール</h3>
+    <p class="legend">こたえると（まちがえても）星がもらえ、キラに あげると そだちます。星や段階が へることは ありません。休んだ日が あっても 何も へりません。キラの ようすと 星の数は この画面でだけ 見られます。</p>
+    <div class="profs">${rows}</div>
+    <button class="sbtn add" id="addProf">＋ プロフィールを ふやす</button>
+    <div class="opts">
+      <label>1日の プレイ時間（ひとりずつ） <input type="number" class="num" id="kMin" min="${L.minutes[0]}" max="${L.minutes[1]}" value="${kcfg.sessionMinutes}"> 分</label>
+      <span class="legend">こえると、その問題が おわったところで キラが ねむくなって おわります（つぎの日に また あそべます）。</span>
+      <div class="needs">${range(1, KIRA_FINAL - 1).map(st => `<label>${KIRA_STAGES[st].name} → ${KIRA_STAGES[st + 1].name}
+        <span><input type="number" class="num" data-need="${st}" min="${L.stars[0]}" max="${L.stars[1]}" value="${kcfg.starsToNextStage[st]}"> こ</span></label>`).join('')}</div>
+      <button class="sbtn" id="kDefault">時間と 星の数を はじめの値に もどす</button>
+    </div>`;
+}
+// はばの外の値は はばの中に なおしてから 保存
+const saveKset = () => { kcfg = kiraSettings(ksaved); if (ksaved.sessionMinutes != null) ksaved.sessionMinutes = kcfg.sessionMinutes;
+  if (ksaved.starsToNextStage) for (const st in ksaved.starsToNextStage) ksaved.starsToNextStage[st] = kcfg.starsToNextStage[st];
+  store(KSETKEY, ksaved); };
 // 画像は正方形に切り抜いて 240px の JPEG に小さくしてから保存
 function shrink(file){
   return new Promise((res, rej) => {
@@ -1104,6 +1301,17 @@ async function addPics(files){
 }
 sheet.addEventListener('click', e => {
   if (e.target === sheet || e.target.id === 'closeSheet') return closeSheet();
+  if (e.target.id === 'addProf'){ profiles = addProfile(profiles, ''); saveProfiles(); return openSheet(); }
+  if (e.target.id === 'kDefault'){ ksaved = {}; saveKset(); return openSheet(); }
+  if (e.target.dataset.pdel){
+    const id = e.target.dataset.pdel;
+    if (!e.target.dataset.armed){ e.target.dataset.armed = '1'; e.target.textContent = 'もう一度おすと 記録ごと 消えます'; return; }
+    // その子の 記録（キラ・教科）も けす
+    [KIRAKEY, ...Object.values(SUBJ).map(s => s.key)].forEach(k => { try { localStorage.removeItem(profileKey(k, id)); } catch(err) {} });
+    profiles = removeProfile(profiles, id); saveProfiles();
+    if (me.id === id) useProfile(profiles[0].id);
+    return openSheet();
+  }
   if (e.target.dataset.del){ pics = pics.filter(p => p.id !== e.target.dataset.del); savePics(); picMsg = '消しました。'; return openSheet(); }
   if (e.target.id === 'tryVoice') return trySay();
   if (e.target.id === 'reset'){
@@ -1113,6 +1321,10 @@ sheet.addEventListener('click', e => {
 });
 sheet.addEventListener('change', e => {
   if (e.target.id === 'picFile') return addPics([...e.target.files]);
+  if (e.target.dataset.pname){ profiles = renameProfile(profiles, e.target.dataset.pname, e.target.value); saveProfiles(); me = profiles.find(p => p.id === me.id); e.target.value = profiles.find(p => p.id === e.target.dataset.pname).name; return; }
+  if (e.target.id === 'kMin'){ ksaved.sessionMinutes = +e.target.value; saveKset(); e.target.value = kcfg.sessionMinutes; return; }
+  if (e.target.dataset.need){ const st = e.target.dataset.need;
+    ksaved.starsToNextStage = Object.assign({}, ksaved.starsToNextStage, { [st]: +e.target.value }); saveKset(); e.target.value = kcfg.starsToNextStage[st]; return; }
   if (e.target.dataset.pid){ const p = pics.find(x => x.id === e.target.dataset.pid); if (p) { p.name = e.target.value.trim(); savePics(); } return; }
   if (e.target.id === 'optVoice'){ opt.voice = e.target.checked; saveOpt(); if (!opt.voice) stopVoice(); return; }
   if (e.target.id === 'optClips'){ opt.clips = e.target.checked; saveOpt(); return trySay(); }
@@ -1125,5 +1337,7 @@ sheet.addEventListener('change', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
 
 useSubj(opt.subj);
-home();
+drawKira(); drawJar();
+greetNext = true;
+profiles.length > 1 ? who() : home();
 })();

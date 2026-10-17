@@ -4,7 +4,7 @@
    文を足したり変えたりしたら make-voice.py で音声を作りなおす（どの引数で数えるかは line() の each で決める）。 */
 
 // each：allLines() が 音声を作るときに 何を入れて呼ぶか
-//   ''  引数なし 1回 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'k' ドレミ 1〜7 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
+//   ''  引数なし 1回 / 'st' キラの 段階 2〜6 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'k' ドレミ 1〜7 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
@@ -17,7 +17,16 @@ const monName = n => S.mon[n][0];
 const monSay = n => `«${S.mon[n][2]}|${S.mon[n][0]}»`;
 
 const LINE = {
-  home: line('', () => ['なにして あそぶ？ 5もん クリアで なかまが ふえるよ', '何して遊ぶ？ 5問クリアで、仲間が増えるよ']),
+  home: line('', () => ['なにして あそぶ？', '何して遊ぶ？ 答えて、キラに星をあげよう']),
+  // キラ（だれが あそぶ？・あいさつ・星・へんしん・おやすみ）。どれも せめない、かなしまない
+  who: line('', () => ['だれが あそぶ？', '誰が遊ぶ？']),
+  hello: line('', () => ['キラと いっしょに あそぼう！', 'キラと一緒に、遊ぼう！']),
+  okaeri: line('', () => ['おかえり！ キラ まってたよ', 'おかえり！ キラ、待ってたよ！']),
+  giveStar: line('', () => [null, '星を、キラにあげてね']),
+  evolve: line('st', st => [`ほしの ビンが いっぱい！ キラが ${KIRA_STAGES[st].become}`, `星の瓶が、いっぱい！ キラが、${KIRA_STAGES[st].becomeSay}`]),
+  mane: line('', () => ['たてがみに あたらしい いろが ふえたよ！', 'たてがみに、新しい色が増えたよ！']),
+  sleepy: line('', () => ['キラ ねむく なってきた…', 'キラ、眠くなってきた。']),
+  night: line('', () => ['おやすみ キラ。また あした あそぼうね', 'おやすみ、キラ。 また明日、遊ぼうね']),
   learn: line('n', n => S.learn(n)),
   // num・total・wrongCount は 番号ではなく 数そのもの（0〜30）
   num: line('v', v => [null, numYomi(v)]),
@@ -65,11 +74,6 @@ const LINE = {
   ear: line('', () => S.flags ? ['この わおんは なにいろ？', 'この和音は、何色かな？'] : ['この おとは なに かな？', 'この音は、何かな？'], hasMode('ear')),
   wrongEar: line('n', n => [`${S.label[n]} じゃないよ。もういちど きいてね`, `${V(n)}じゃないよ。 もう一度、聞いてね`], hasMode('ear')),
   is: line('n', n => [`それは ${nameOf(n)}`, `それは${V(n)}`], hasMode('balloon')),
-  monNew: line('n', n => [`あっ！ ${monName(n)}が でてきた！ カプセルを なげよう`, `あっ！ ${monSay(n)}が出てきた！ どんぐりカプセルを、投げよう`]),
-  monVisit: line('n', n => [`${monName(n)}が あそびに きたよ！`, `${monSay(n)}が、遊びに来たよ！ ${V(n)}の仲間だね`]),
-  caught: line('n', n => [`やったー！ ${monName(n)}が なかまに なった！`, `やったー！ ${monSay(n)}が、仲間になった！ ${S.belly(n)}`]),
-  glow: line('n', n => [`あれ？ ${monName(n)}が ひかってる…！`, `あれ？ ${monSay(n)}が、光ってる！`]),
-  evolved: line('n', n => [`${monName(n)}が しんかした！`, `${monSay(n)}が、進化した！ ${V(n)}が、得意になったね`]),
   newOne: line('n', n => [`あたらしい ${S.name} ${S.label[n]} が でてきたよ`, `新しい${S.unit}、${V(n)}が出てきたよ`]),
   book: line('c', c => [c ? `なかまが ${c}ひき いるよ。さわってみてね` : 'あそぶと なかまが ふえるよ', c ? `仲間が${c}匹いるよ。 触ってみてね` : '遊ぶと仲間が増えるよ']),
   hiroba: line('c', c => [c ? `なかまが ${c}ひき あそんでるよ。さわってみてね` : 'まだ なかまが いないよ。あそぶと なかまが ふえるよ',
@@ -105,7 +109,7 @@ function allLines(){
   for (const s of Object.values(SUBJ)){
     S = s;
     const ns = range(1, s.max);
-    const args = { '': [[]], n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
+    const args = { '': [[]], st: range(2, KIRA_FINAL).map(st => [st]), n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
       n3: ns.filter(n => s.val && s.val(n) >= 3).map(n => [n]), g: ns.filter(n => s.glyph && s.glyph(n)).map(n => [n]), c: range(0, s.max).map(c => [c]),
       v: range(1, 30).map(v => [v]), k: range(1, 7).map(k => [k]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]), pic: Object.keys(PICTURES).map(k => [k]) };
     for (const f of Object.values(LINE)){

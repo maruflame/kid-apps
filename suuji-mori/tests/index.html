@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キラの テスト</title>
+<style>body{font:15px/1.6 system-ui,sans-serif;margin:16px;background:#F6F2FF;color:#3A2E6E}pre{white-space:pre-wrap}</style>
+<pre id="out">…</pre>
+<script src="../data.js"></script>
+<script src="../kira-config.js"></script>
+<script src="../kira.js"></script>
+<script src="kira.test.js"></script>
+<script>document.getElementById('out').textContent = KIRA_TEST.report; document.title = (KIRA_TEST.failed ? '✘ ' : '✔ ') + document.title;</script>
