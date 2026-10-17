@@ -77,8 +77,6 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .gift{position:absolute;z-index:4;border:0;background:none;padding:0;touch-action:none;cursor:grab;filter:drop-shadow(0 5px 0 rgba(232,181,58,.45))}
 .gift svg{display:block;width:100%;height:100%;animation:twinkle 1.4s ease-in-out infinite}
 .gift.big{right:2%;bottom:2%;width:clamp(88px,24vw,112px);aspect-ratio:1}
-.gift.small{left:4%;bottom:6%;width:64px;aspect-ratio:1;opacity:.95}
-.gift.small::before{content:"";position:absolute;inset:-12px}
 .gift.held{cursor:grabbing;scale:1.12;z-index:6}
 
 /* 問題の ボード（白・角丸36）：問題文＋読み上げボタン、その下に あそび */

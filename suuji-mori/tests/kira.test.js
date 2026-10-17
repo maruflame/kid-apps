@@ -23,7 +23,7 @@ const atStage = st => Object.assign(newKira(), { stage: st, maneColors: st === K
 test('初期値は 仕様どおり（10 / 30 / 100 / 200 / 350、10分、星1こ）', () => {
   eq(cfg.starsToNextStage, { 1: 10, 2: 30, 3: 100, 4: 200, 5: 350 });
   eq(cfg.sessionMinutes, 10);
-  eq([cfg.starForCorrect, cfg.starForTry], [1, 1]);
+  eq([cfg.questionsPerRound, cfg.starPerRound], [5, 1]);
 });
 test('おうちのかたの設定で 必要数・時間を かえられる', () => {
   const c = kiraSettings({ starsToNextStage: { 1: 3 }, sessionMinutes: 20 });
@@ -44,10 +44,10 @@ test('星は ふえるだけ（0・マイナス・へんな値では へらな�
     eq([k2.stage, k2.starsInStage, k2.totalStars], [k.stage, k.starsInStage, k.totalStars]);
   }
 });
-test('正解でも まちがいでも 星がもらえ、合計は へらない', () => {
+test('星を もらうたびに 合計が ふえ、へらない', () => {
   let k = newKira(), last = 0;
   for (let i = 0; i < 2000; i++) {
-    k = give(k, i % 3 ? cfg.starForCorrect : cfg.starForTry).kira;
+    k = give(k, cfg.starPerRound).kira;
     ok(k.totalStars > last, 'totalStars が ふえていない'); last = k.totalStars;
   }
   eq(k.totalStars, 2000);
