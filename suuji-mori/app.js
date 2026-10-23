@@ -336,6 +336,8 @@ const LEARN_CARD = {
     <button class="play" data-play="cur" aria-label="もういちど きく">🔊</button>`,
   abc: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}<span class="lo">${S.lower[n]}</span></button>
        <button class="word" data-word="${n}" aria-label="${esc(WORD[n][1])}"><span class="em">${WORD[n][0]}</span><span>${markWord(WORD[n][1], S.lower[n])}</span></button>`,
+  hira: n => `<button class="bignum" data-n="${n}" aria-label="${S.yomi[n]}">${S.label[n]}</button>
+       <button class="word" data-word="${n}" aria-label="${esc(HWORD[n][1])}"><span class="em">${HWORD[n][0]}</span><span>${markWord(HWORD[n][1], S.label[n])}</span></button>`,
 };
 function noteCard(n){
   const k = S.nt(n), [nm, , , m, hint] = NOTE[k];
@@ -678,12 +680,13 @@ function strokeDone(){
 /* ---------- かいてみよう ----------
    うすい手本の上に 自由に書く。書いた線と 手本を くらべて 判定する（書き順と 書いた向きは見ない）。
    点には 線の向き（0〜180°）もつけて、近くても 向きが ちがう線は 合っていないとみなす（O と D、H と M などを見分ける）。
-   ・手本の点のうち 同じ向きの書いた線が W_HIT 以内にある わりあい：全体で 88% 以上、どの画も 85% 以上
+   ・手本の点のうち 同じ向きの書いた線が W_HIT 以内にある わりあい：全体で 88% 以上、どの画も 85% 以上（点のような みじかい画は 60%）
+   ・ひらがな（S.tail）は どの画も おわりの S.tail 点の 60% 以上（め と ぬ のように おわりの まるだけ ちがう字を 見分ける）
    ・書いた点のうち 同じ向きの手本が W_HIT 以内にある わりあい：90% 以上、長さも 手本の2倍まで（ぐちゃぐちゃ塗りは ×）
    ぜんたいが すこし ずれて書いていても いいように、書いた線を 手本に いちばん合う所まで（W_SHIFT まで）ずらしてから くらべる。
    指をはなして すこし待ち、書けていれば 自動で せいかい。「できた！」で その場で判定し、だめなら どこが だめかを 見せる。
    なぞりがきと同じく なれ度は 上げ下げしない。 */
-const W_HIT = 11, W_ANG = Math.PI / 6, W_SHIFT = 5, W_WAIT = 900;
+const W_HIT = 11, W_ANG = Math.PI / 6, W_SHIFT = 5, W_WAIT = 900, W_DOT = 10;
 let wr = null;
 // 書いた線を 2 ずつの点に（すばやく書くと 点が とびとびになるので）
 function dense(pts){
@@ -763,7 +766,11 @@ function judge(){
   const ink = raw.flatMap(p => withDir(p.map(([x, y]) => [x + dx, y + dy]), 5)), gd = wr.gd.map(p => withDir(p, 2)), tpl = gd.flat();
   const hit = gd.map(p => p.map(pt => match(pt, ink)));
   const off = rate(ink.map(pt => match(pt, tpl))) < .9 || pathLen(wr.ink.map(st => st.pts)) > wr.len * 2 + 30;
-  return { ok: !off && rate(hit.flat()) >= .88 && Math.min(...hit.map(rate)) >= .85, off, hit };
+  // ひらがな：画の おわり（ぬ・ね の 小さな まる など）を 書いていないと ×（め と ぬ、わ と ね を 見分ける）
+  const tail = !S.tail || hit.every(h => h.length < S.tail * 2 || rate(h.slice(-S.tail)) >= .6);
+  // 点のような みじかい画（W_DOT 点まで）は 指では ずれやすいので 60% で いい
+  const each = hit.every(h => rate(h) >= (h.length <= W_DOT ? .6 : .85));
+  return { ok: !off && tail && each && rate(hit.flat()) >= .88, off, hit };
 }
 function writeClear(){
   wr.gen++; wr.ink = []; wr.cur = null;
@@ -1154,7 +1161,7 @@ stage.addEventListener('click', e => {
   if (el.dataset.go) return GO[el.dataset.go]();
   if (el.dataset.learn) return learn(+el.dataset.learn);
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
-  if (el.dataset.word){ bounce(el, 1.1); return sayLine('word', +el.dataset.word); }
+  if (el.dataset.word){ bounce(el, 1.1); return sayLine(S.id === 'hira' ? 'hword' : 'word', +el.dataset.word); }
   if (el.dataset.ans) return (ADDQ.includes(mode) ? answerAdd : answer)(+el.dataset.ans, el);
   if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : writeClear();
   if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
@@ -1205,7 +1212,7 @@ function openSheet(){
   sheetIn.innerHTML = `
     <h2 id="sheetTitle">おうちのかたへ</h2>
     ${kiraSheet()}
-    <p class="legend">ホーム画面の上で「すうじ」「ABC」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はプロフィールごと・教科ごとに別に残ります。以下は いま あそんでいる「${esc(me.name)}」の「${S.name}」についてです。</p>
+    <p class="legend">ホーム画面の上で「すうじ」「ABC」「ひらがな」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はプロフィールごと・教科ごとに別に残ります。以下は いま あそんでいる「${esc(me.name)}」の「${S.name}」についてです。</p>
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>

@@ -80,6 +80,7 @@ const LINE = {
     c ? `仲間が${c}匹、遊んでるよ。 触ってみてね` : 'まだ仲間がいないよ。 遊ぶと、仲間が増えるよ']),
   mon: line('n', n => [`${monName(n)}。${nameOf(n)}の なかま`, `${monSay(n)}。 ${V(n)}の仲間だよ`]),
   word: line(null, n => [null, `«${WORD[n][1]}|${WORD[n][2]}»`]),
+  hword: line('n', n => [null, HWORD[n][2]], s => s.id === 'hira'),
   tryIt: line('', () => [null, S.tryIt()]),
   // ぬりえ
   nurieGallery: line('', () => ['どの おひめさまを ぬる？', 'どのお姫様を、塗る？']),
