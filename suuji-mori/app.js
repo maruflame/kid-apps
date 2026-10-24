@@ -30,7 +30,8 @@ let ksaved = load(KSETKEY, v => typeof v === 'object') || {}, kcfg = kiraSetting
 const loadKiraOf = id => normalizeKira(load(profileKey(KIRAKEY, id), v => typeof v === 'object'));
 let kira = loadKiraOf(me.id);
 const saveKira = () => store(pkey(KIRAKEY), kira);
-const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), caught: {}, unlocked: S.start || 3, allOpen: false });
+// mem：たんご れんしゅう で その文字を どこまで 見ないで 書けるか（0 うすい手本 / 1 見て けす / 2 声だけ）
+const fresh = () => ({ lv: Array(S.max+1).fill(0), evo: Array(S.max+1).fill(1), mem: Array(S.max+1).fill(0), caught: {}, unlocked: S.start || 3, allOpen: false });
 let state;
 const save = () => store(pkey(S.key), state);
 // むかしの「1〜10」と「11〜30」の記録を、1〜30 の記録に まとめる（まだ無いときに いちどだけ。むかしの記録は消さない）
@@ -263,7 +264,7 @@ function record(n, good){
 const pickItem = () => pics.length && Math.random() < .5 ? pick(pics) : pick(ITEMS);
 
 /* ---------- がめん ---------- */
-const QUIZ = ['find','count','pair','next','key','name','ear'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write'];
+const QUIZ = ['find','count','pair','next','key','name','ear'], ADDQ = ['awase','fueru','ten'], GAMES = [...QUIZ, ...ADDQ, 'balloon', 'trace', 'write', 'tango'];
 let mode = null, lastGame = 'find', timers = [], spawnTimer = null, token = 0, q = null, cur = 1, counted = 0;
 let walkRaf = 0, walkers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -686,6 +687,7 @@ function strokeDone(){
    ぜんたいが すこし ずれて書いていても いいように、書いた線を 手本に いちばん合う所まで（W_SHIFT まで）ずらしてから くらべる。
    指をはなして すこし待ち、書けていれば 自動で せいかい。「できた！」で その場で判定し、だめなら どこが だめかを 見せる。
    なぞりがきと同じく なれ度は 上げ下げしない。 */
+const WRITES = ['write', 'tango'];
 const W_HIT = 11, W_ANG = Math.PI / 6, W_SHIFT = 5, W_WAIT = 900, W_DOT = 10;
 let wr = null;
 // 書いた線を 2 ずつの点に（すばやく書くと 点が とびとびになるので）
@@ -722,19 +724,40 @@ function bestShift(tpl, ink){
 function write(){ setMode('write'); nextWrite(); }
 function nextWrite(){
   ask();
-  const t = pickTarget(n => !!S.glyph(n)), g = S.glyph(t), w = g.w || 100, gd = (g.s || g).map(strokePts);
+  const t = pickTarget(n => !!S.glyph(n));
   q = {t, miss:0, over:false};
-  wr = { gd, ink: [], cur: null, gen: 0, len: pathLen(gd) };
-  stage.innerHTML = `<div class="card count-card" style="--c:${S.color[t]}">
-    <svg class="trace write" id="wsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${S.yomi[t]}">
-      ${gd.map(p => `<polyline class="wg" points="${ptsAttr(p)}"/>`).join('')}<g class="gaps"></g><g class="inks"></g></svg>
-    <div class="row"><button class="pill alt" data-wact="clear" disabled>けす</button><button class="pill" data-wact="done" disabled>できた！</button></div></div>`;
+  writeBox(S.glyph(t), S.color[t], S.yomi[t], 0);
   tell('write', t);
 }
-const writeBtns = () => stage.querySelectorAll('[data-wact]').forEach(b => b.disabled = q.over || !wr.ink.length);
+// 書く マス。sup：手本の出かた（0 うすい手本 / 1 見せてから けす / 2 はじめから かくす）。top：マスの上に だすもの
+function writeBox(g, c, label, sup, top = ''){
+  const w = g.w || 100, gd = (g.s || g).map(strokePts);
+  wr = { gd, ink: [], cur: null, gen: 0, len: pathLen(gd), sup, hidden: sup === 2, hint: false, onOk: null };
+  stage.innerHTML = `${top}<div class="card count-card" style="--c:${c}">
+    <svg class="trace write${wr.hidden ? ' hide' : ''}" id="wsvg" viewBox="0 0 ${w} 100" role="img" aria-label="${label}">
+      ${S.masu ? `<g class="masu"><rect x="2" y="2" width="${w-4}" height="96" rx="6"/><path d="M${w/2} 6V94M6 50H${w-6}"/></g>` : ''}
+      ${gd.map(p => `<polyline class="wg" points="${ptsAttr(p)}"/>`).join('')}<g class="gaps"></g><g class="inks"></g></svg>
+    <div class="row">${sup ? '<button class="pill alt" data-wact="hint">💡 ヒント</button>' : ''}<button class="pill alt" data-wact="clear" disabled>けす</button><button class="pill" data-wact="done" disabled>できた！</button></div></div>`;
+}
+const writeBtns = () => stage.querySelectorAll('[data-wact]').forEach(b => b.disabled = q.over || (b.dataset.wact !== 'hint' && !wr.ink.length));
+// 見せていた 手本を けす（書きはじめたら すぐ けす：写さないように）
+function hideModel(talk){
+  if (!wr || wr.hidden) return;
+  wr.hidden = true; $('#wsvg').classList.add('hide');
+  if (talk) tell('hidden');
+}
+// ヒント：かくした 手本を すこしだけ 見せる。その文字は 1つ前の 段階に もどる
+function showHint(){
+  if (!wr || !wr.hidden || q.over) return;
+  wr.hint = true;
+  const svg = $('#wsvg'), w0 = wr;
+  svg.classList.add('peek'); tell('hint');
+  later(() => { if (wr === w0) svg.classList.remove('peek'); }, 2500);
+}
 function writeDown(svg, e){
   e.preventDefault();
   if (q.over) return;
+  hideModel(false);
   wr.gen++;
   svg.querySelector('.gaps').innerHTML = '';
   const el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
@@ -761,11 +784,26 @@ function writeUp(){
   const gen = ++wr.gen;
   later(() => { if (gen === wr.gen && !q.over && judge().ok) writeOk(); }, W_WAIT);
 }
+// 手本を かくして 書いたときは 大きさと 位置が ずれやすいので、書いた線の 外わくを 手本の 外わくに あわせる（たて・よこの のびは 1.4倍まで ちがって いい）
+function fitBox(ink, gd){
+  const box = ps => { const xs = ps.map(p => p[0]), ys = ps.map(p => p[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+  const [a0, b0, a1, b1] = box(ink.flat()), [c0, d0, c1, d1] = box(gd.flat());
+  let sx = (c1 - c0) / Math.max(a1 - a0, 4), sy = (d1 - d0) / Math.max(b1 - b0, 4);
+  // し・く のように 細い字は 細い向きの のびを 使わない
+  if (a1 - a0 < 15 || c1 - c0 < 15) sx = sy; if (b1 - b0 < 15 || d1 - d0 < 15) sy = sx;
+  const m = Math.sqrt(sx * sy), cl = v => Math.max(m / 1.2, Math.min(m * 1.2, v));
+  sx = Math.max(.4, Math.min(2.5, cl(sx))); sy = Math.max(.4, Math.min(2.5, cl(sy)));
+  const ix = (a0 + a1) / 2, iy = (b0 + b1) / 2, gx = (c0 + c1) / 2, gy = (d0 + d1) / 2;
+  return ink.map(p => p.map(([x, y]) => [gx + (x - ix) * sx, gy + (y - iy) * sy]));
+}
 function judge(){
-  const raw = wr.ink.map(st => dense(st.pts)), [dx, dy] = bestShift(wr.gd.flat(), raw.flat());
-  const ink = raw.flatMap(p => withDir(p.map(([x, y]) => [x + dx, y + dy]), 5)), gd = wr.gd.map(p => withDir(p, 2)), tpl = gd.flat();
+  const raw0 = wr.ink.map(st => dense(st.pts)), raw = wr.sup ? fitBox(raw0, wr.gd) : raw0, [dx, dy] = bestShift(wr.gd.flat(), raw.flat());
+  const inks = raw.map(p => withDir(p.map(([x, y]) => [x + dx, y + dy]), 5)), ink = inks.flat(), gd = wr.gd.map(p => withDir(p, 2)), tpl = gd.flat();
   const hit = gd.map(p => p.map(pt => match(pt, ink)));
-  const off = rate(ink.map(pt => match(pt, tpl))) < .9 || pathLen(wr.ink.map(st => st.pts)) > wr.len * 2 + 30;
+  // 手本を かくした ときは 書いた 画も 1つずつ 見る：手本に ない 画（う の 点を つ に たす など）が あれば はみだし
+  const off = rate(ink.map(pt => match(pt, tpl))) < .9 || wr.sup && inks.some(p => p.length > 6 && rate(p.map(pt => match(pt, tpl))) < .7)
+    || pathLen(raw) > wr.len * 2 + 30;
   // ひらがな：画の おわり（ぬ・ね の 小さな まる など）を 書いていないと ×（め と ぬ、わ と ね を 見分ける）
   const tail = !S.tail || hit.every(h => h.length < S.tail * 2 || rate(h.slice(-S.tail)) >= .6);
   // 点のような みじかい画（W_DOT 点まで）は 指では ずれやすいので 60% で いい
@@ -786,7 +824,7 @@ function writeDone(){
   q.miss++; boop(); tried();
   svg.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}], {duration:350});
   // 2回まちがえたら 手本を こくする
-  if (q.miss >= 2) svg.classList.add('help');
+  if (q.miss >= 2) wr.sup ? later(showHint, 1800) : svg.classList.add('help');
   if (j.off){ writeClear(); return tell('writeOff'); }
   // 書けていない所（つづいた点）を 黄色で しめす
   const runs = [];
@@ -801,10 +839,67 @@ function writeOk(){
   const n = q.t, svg = $('#wsvg');
   q.over = true; writeBtns();
   svg.querySelector('.gaps').innerHTML = '';
-  svg.classList.add('done');
+  svg.classList.remove('hide', 'peek'); svg.classList.add('done');
   chime(); burst(svg, 24);
   svg.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:500});
+  if (wr.onOk) return wr.onOk();
   win(n, nextWrite, 1800);
+}
+
+/* ---------- たんご れんしゅう（ひらがな） ----------
+   なまえ や ことばを 1文字ずつ 書く。写すだけでは 覚えにくいので、その文字を どこまで 見ないで 書けるか（state.mem）で 手本を へらす：
+   0 うすい手本 → 1 3秒 見せて けす → 2 声だけ。ヒントなしで 書けたら 1つ進み、2 で 書けたら なれ度が 上がる。ヒントを 使ったら 1つ もどる。
+   上の マスには 書けた 文字だけ 出す（さきの 文字を 見て 写さないように）。 */
+const LOOK_MS = 3000;
+let tw = null;
+const toHira = s => [...s].map(c => { const k = c.codePointAt(0); return k >= 0x30A1 && k <= 0x30F6 ? String.fromCodePoint(k - 0x60) : c; }).join('');
+const baseOf = c => HIRA.indexOf([...c.normalize('NFD')][0]);
+// なまえ（書ける 字だけで できていれば）と HWORD の ことば
+function tangoList(){
+  const ok = w => w.length > 0 && [...w].every(c => hiraGlyph(c) && baseOf(c) > 0);
+  const nm = toHira(me.name.replace(/\s/g, ''));
+  return [...(ok(nm) ? [['📛', nm]] : []), ...HWORD.slice(1).map(([em, w]) => [em, w.replace(/\s/g, '')]).filter(([, w]) => ok(w))];
+}
+function tango(){
+  setMode('tango'); tw = null;
+  stage.innerHTML = `<div class="tango-list">${tangoList().map(([em, w], i) =>
+    `<button class="tpick${i === 0 && em === '📛' ? ' me' : ''}" data-tango="${i}"><span class="em">${em}</span>${esc(w)}</button>`).join('')}</div>`;
+  tell('tangoPick');
+}
+function startTango(i){
+  const [em, w] = tangoList()[i];
+  tw = { em, w: [...w], i: 0 };
+  guide(...LINE.tango(w), () => { if (tw && tw.i === 0 && mode === 'tango') cueChar(); });
+  nextChar(true);
+}
+function nextChar(quiet){
+  ask();
+  const c = tw.w[tw.i], n = baseOf(c), sup = state.mem[n] || 0;
+  q = {t:n, miss:0, over:false};
+  const boxes = tw.w.map((ch, j) => `<span class="tbox${j < tw.i ? ' done' : j === tw.i ? ' now' : ''}">${j < tw.i ? ch : ''}</span>`).join('');
+  writeBox(hiraGlyph(c), S.color[n], c, sup, `<div class="tango-word"><span class="em">${tw.em}</span>${boxes}</div>`);
+  wr.onOk = () => charOk(n, sup);
+  if (!quiet) cueChar();
+}
+// その文字の 手本の出かたに あわせて 声を かける（見せる ときは LOOK_MS で けす）
+function cueChar(){
+  const c = tw.w[tw.i], w0 = wr;
+  if (w0.sup === 1 && !w0.hidden){ tell('look', c); later(() => { if (wr === w0 && !q.over) hideModel(true); }, LOOK_MS); }
+  else tell(w0.sup === 2 || w0.hidden ? 'hear' : 'copy', c);
+}
+function charOk(n, sup){
+  if (wr.hint) state.mem[n] = Math.max(0, sup - 1);
+  else if (sup < 2) state.mem[n] = sup + 1;
+  else record(n, true);
+  if (!state.caught[n]) state.caught[n] = true;
+  save();
+  if (++tw.i < tw.w.length){ const [p, ps] = pick(PRAISE); guide(p, ps); return later(() => nextChar(), 1300); }
+  const w = tw.w.join('');
+  later(() => { chime(); burst($('.tango-word'), 30); }, 300);
+  stage.querySelectorAll('.tbox').forEach((b, j) => { b.textContent = tw.w[j]; b.classList.add('done'); b.classList.remove('now'); });
+  guide(...LINE.tangoDone(w));
+  kiraFace('happy');
+  starTime(tango, Date.now() + 2400);
 }
 
 /* ---------- キラ（え は kira-art.js、そだつ しくみ は kira.js） ----------
@@ -1143,7 +1238,7 @@ function resetNurie(btn){
   nu[pic] = {}; store(NURIEKEY, nu); boop(); openPic(pic);
 }
 
-const GO = { home, who, learn: () => learn(), balloon, trace, write, book, hiroba, nurie };
+const GO = { home, who, learn: () => learn(), balloon, trace, write, tango, book, hiroba, nurie };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 ADDQ.forEach(k => GO[k] = () => startAdd(k));
 // じかんが おわっていたら あそびは はじめず おやすみ
@@ -1163,7 +1258,8 @@ stage.addEventListener('click', e => {
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
   if (el.dataset.word){ bounce(el, 1.1); return sayLine(S.id === 'hira' ? 'hword' : 'word', +el.dataset.word); }
   if (el.dataset.ans) return (ADDQ.includes(mode) ? answerAdd : answer)(+el.dataset.ans, el);
-  if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : writeClear();
+  if (el.dataset.wact) return el.dataset.wact === 'done' ? writeDone() : el.dataset.wact === 'hint' ? showHint() : writeClear();
+  if (el.dataset.tango) return startTango(+el.dataset.tango);
   if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
   if (el.dataset.who){ useProfile(el.dataset.who); tone(784,0,.15,'triangle',.12); greetNext = true; return home(); }
@@ -1184,15 +1280,15 @@ stage.addEventListener('click', e => {
 stage.addEventListener('pointerdown', e => {
   const b = e.target.closest('.balloon'); if (b) { e.preventDefault(); popBalloon(b); }
   const t = mode === 'trace' && e.target.closest('#tsvg'); if (t) traceDown(t, e);
-  const w = mode === 'write' && e.target.closest('#wsvg'); if (w) writeDown(w, e);
+  const w = WRITES.includes(mode) && e.target.closest('#wsvg'); if (w) writeDown(w, e);
 });
 stage.addEventListener('pointermove', e => {
   if (mode === 'trace' && tr && tr.on) traceMove(e);
-  if (mode === 'write' && wr && wr.cur) writeMove(e);
+  if (WRITES.includes(mode) && wr && wr.cur) writeMove(e);
 });
 ['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, () => {
   if (tr) tr.on = false;
-  if (mode === 'write' && wr && wr.cur) writeUp();
+  if (WRITES.includes(mode) && wr && wr.cur) writeUp();
 }));
 homeBtn.addEventListener('click', home);
 whoChip.addEventListener('click', who);
