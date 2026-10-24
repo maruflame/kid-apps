@@ -90,6 +90,12 @@ const GL_HIRA = {
   'を': ['M24 28L72 26', 'M46 12Q40 34 26 56Q42 44 56 48Q60 54 56 62', 'M80 50Q50 62 52 76Q56 88 78 86'],
   'ん': ['M54 12Q36 54 22 86Q34 56 48 54Q56 56 56 70Q58 84 66 84Q76 82 82 68'],
 };
+// が・ぱ など：もとの字に 濁点（2画）・半濁点（1画）を たす。字形が ない字は null
+function hiraGlyph(c){
+  if (GL_HIRA[c]) return GL_HIRA[c];
+  const [b, m] = [...c.normalize('NFD')], g = GL_HIRA[b];
+  return !g ? null : m === '\u3099' ? [...g, 'M78 10L82 20', 'M88 8L92 18'] : m === '\u309A' ? [...g, 'A86 15 6 6 -90 270'] : null;
+}
 // 1画を 3 ずつの 等間隔の点に（なぞりの判定と 色ぬりに使う）
 const STEP = 3;
 function strokePts(str){

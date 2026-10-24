@@ -4,12 +4,13 @@
    文を足したり変えたりしたら make-voice.py で音声を作りなおす（どの引数で数えるかは line() の each で決める）。 */
 
 // each：allLines() が 音声を作るときに 何を入れて呼ぶか
-//   ''  引数なし 1回 / 'st' キラの 段階 2〜6 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'k' ドレミ 1〜7 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
+//   ''  引数なし 1回 / 'h' ひらがな 1文字 / 'st' キラの 段階 2〜6 / 'n' 番号 1〜max / 'nn' (n, n) / 'n3' 3 から（つぎは なに？） / 'g' 字形のある番号（なぞりがき・かいてみよう） / 'c' 0〜max / 'v' 数 1〜30 / 'k' ドレミ 1〜7 / 'p' ほめ言葉 × 番号 / 'color' ぬりえの色 / 'pic' ぬりえの絵 / null 数えない（英語だけ など）
 // when：その教科で使うときだけ数える
 const line = (each, f, when) => Object.assign(f, { each, when });
 const hasMode = m => s => s.modes.some(x => x[0] === m);
 const notAdd = s => s.id !== 'add', isAdd = s => s.id === 'add';
 const isPitch = s => !!s.pitch;
+const writes = s => hasMode('write')(s) || hasMode('tango')(s);
 // ドレミは 読みと 字が おなじなので（ド）だけ
 const nameOf = n => S.label[n] === S.yomi[n] ? S.label[n] : `${S.label[n]}（${S.yomi[n]}）`;
 const monName = n => S.mon[n][0];
@@ -48,8 +49,18 @@ const LINE = {
   trace: line('g', n => [`「${S.yomi[n]}」を なぞろう。みどりの まるから スタート`, `${V(n)}を、なぞってみよう。 緑の丸から、スタート`], hasMode('trace')),
   traceNext: line('', () => ['つぎの せんも なぞってね', '次の線も、なぞってね']),
   write: line('g', n => [`「${S.yomi[n]}」を かいてみよう。うすい じを みてね`, `${V(n)}を、書いてみよう。 薄い字を、よく見てね`], hasMode('write')),
-  writeMore: line('', () => ['おしい！ きいろの ところも かいてね', 'おしい！ 黄色のところも、書いてね'], hasMode('write')),
-  writeOff: line('', () => ['はみだしちゃった。もういちど かこう', 'はみ出しちゃったね。 もう一度、書いてみよう'], hasMode('write')),
+  writeMore: line('', () => ['おしい！ きいろの ところも かいてね', 'おしい！ 黄色のところも、書いてね'], writes),
+  writeOff: line('', () => ['はみだしちゃった。もういちど かこう', 'はみ出しちゃったね。 もう一度、書いてみよう'], writes),
+  // たんご れんしゅう（c は ひらがな 1文字）：手本 → 見て けす → 声だけ
+  copy: line('h', c => [`「${c}」を かいてみよう。うすい じを みてね`, `「${c}」を、書いてみよう。 薄い字を、よく見てね`], hasMode('tango')),
+  look: line('h', c => [`「${c}」を よく みてね。きえるよ`, `「${c}」を、よく見てね。 消えるよ`], hasMode('tango')),
+  hidden: line('', () => ['きえた！ おもいだして かいてね', '消えたよ！ 思い出して、書いてね'], hasMode('tango')),
+  hear: line('h', c => [`「${c}」を かけるかな？`, `「${c}」を、書けるかな？ 思い出して、書いてね`], hasMode('tango')),
+  hint: line('', () => ['ヒント！ よく みてね', 'ヒントだよ。 よく見てね'], hasMode('tango')),
+  tangoPick: line('', () => ['どの ことばを かく？', 'どの言葉を、書く？'], hasMode('tango')),
+  // たんご は なまえ（あとから きまる）も あるので ブラウザの声
+  tango: line(null, w => [`「${w}」を かこう！`, `${w}を、書こう！`]),
+  tangoDone: line(null, w => [`できた！ 「${w}」`, `できた！ ${w}！`]),
   // たしざん（a・b は しきの 2つの数）
   awase: line('n', n => { const [a, b] = S.fact[n];
     return [`${a} と ${b}、あわせて いくつ？`, `${YOMI[a]}と${YOMI[b]}、合わせて、いくつかな？ 触って数えてもいいよ`]; }, isAdd),
@@ -110,7 +121,7 @@ function allLines(){
   for (const s of Object.values(SUBJ)){
     S = s;
     const ns = range(1, s.max);
-    const args = { '': [[]], st: range(2, KIRA_FINAL).map(st => [st]), n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
+    const args = { '': [[]], h: s.id === 'hira' ? [...HIRA].slice(1).map(c => [c]) : [], st: range(2, KIRA_FINAL).map(st => [st]), n: ns.map(n => [n]), nn: ns.map(n => [n, n]),
       n3: ns.filter(n => s.val && s.val(n) >= 3).map(n => [n]), g: ns.filter(n => s.glyph && s.glyph(n)).map(n => [n]), c: range(0, s.max).map(c => [c]),
       v: range(1, 30).map(v => [v]), k: range(1, 7).map(k => [k]), p: PRAISE.flatMap(p => ns.map(n => [p, n])), color: PALETTE.map(p => [p]), pic: Object.keys(PICTURES).map(k => [k]) };
     for (const f of Object.values(LINE)){

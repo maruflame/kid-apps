@@ -410,3 +410,19 @@ button.tenrow{background:#EFE8FF}
   :root{--kira-h:clamp(140px,26vh,220px)}
   .stage{gap:10px}
 }
+
+/* たんご れんしゅう */
+.trace .masu rect{fill:none;stroke:var(--ground-2);stroke-width:1.5}
+.trace .masu path{stroke:var(--ground-2);stroke-width:1;stroke-dasharray:3 3}
+.trace.hide .wg{opacity:0}
+.trace.hide.peek .wg{opacity:.7}
+.tango-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:520px}
+.tpick{border:0;border-radius:20px;background:var(--paper);box-shadow:0 4px 0 var(--shade);padding:12px 10px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:900;font-size:clamp(20px,5.4vw,28px);color:var(--ink)}
+.tpick .em{font-size:1.3em}
+.tpick.me{grid-column:1/-1;background:var(--sun)}
+.tpick:active{transform:scale(.96)}
+.tango-word{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px}
+.tango-word .em{font-size:36px;margin-right:4px}
+.tbox{width:48px;height:48px;border-radius:12px;border:3px dashed var(--ground-2);display:grid;place-items:center;font-weight:900;font-size:32px;color:var(--ink)}
+.tbox.now{border:3px solid var(--leaf)}
+.tbox.done{border-style:solid;border-color:transparent;background:var(--paper)}
