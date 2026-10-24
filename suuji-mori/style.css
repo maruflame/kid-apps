@@ -88,8 +88,11 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 
 /* stage */
 .stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:18px;padding-block:6px 22px;position:relative;overflow-y:auto;overflow-x:hidden}
-/* ホームなどは キラを 小さく */
-.app:not([data-mode="game"]){--kira-h:clamp(96px,14vh,140px)}
+/* ホームなどは キラを 小さく（書く あそびも：書く マスが 画面に おさまるように） */
+.app:not([data-mode="game"]),.app.writing{--kira-h:clamp(96px,14vh,140px)}
+/* 書く マスは のこりの 高さに あわせて ちぢむ（ボタンまで 画面に おさめる） */
+.app.writing .stage > .card{flex:0 1 auto;min-height:0}
+.app.writing .trace{flex:0 1 auto;min-height:140px}
 .app[data-mode="who"] .kira{visibility:hidden}
 .app[data-mode="night"]{--kira-h:clamp(160px,32vh,290px)}
 
@@ -421,8 +424,7 @@ button.tenrow{background:#EFE8FF}
 .tpick .em{font-size:1.3em}
 .tpick.me{grid-column:1/-1;background:var(--sun)}
 .tpick:active{transform:scale(.96)}
-.tango-word{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px}
-.tango-word .em{font-size:36px;margin-right:4px}
+.tango-word{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px}.tango-word .em{font-size:36px;margin-right:4px}
 .tbox{width:48px;height:48px;border-radius:12px;border:3px dashed var(--ground-2);display:grid;place-items:center;font-weight:900;font-size:32px;color:var(--ink)}
 .tbox.now{border:3px solid var(--leaf)}
 .tbox.done{border-style:solid;border-color:transparent;background:var(--paper)}

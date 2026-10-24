@@ -275,6 +275,7 @@ function setMode(m){
   const game = GAMES.includes(m);
   if (game) lastGame = m;
   appEl.dataset.mode = game ? 'game' : m;
+  appEl.classList.toggle('writing', ['trace', 'write', 'tango'].includes(m));
   jarEl.hidden = !game && m !== 'home';
   homeBtn.hidden = ['home', 'who', 'night'].includes(m);
   whoChip.hidden = m !== 'home' || profiles.length < 2;
@@ -740,9 +741,9 @@ function writeBox(g, c, label, sup, top = ''){
     <div class="row">${sup ? '<button class="pill alt" data-wact="hint">💡 ヒント</button>' : ''}<button class="pill alt" data-wact="clear" disabled>けす</button><button class="pill" data-wact="done" disabled>できた！</button></div></div>`;
 }
 const writeBtns = () => stage.querySelectorAll('[data-wact]').forEach(b => b.disabled = q.over || (b.dataset.wact !== 'hint' && !wr.ink.length));
-// 見せていた 手本を けす（書きはじめたら すぐ けす：写さないように）
+// 見せていた 手本を けす（書きはじめたら すぐ けす：写さないように）。うすい手本（sup 0）は けさない
 function hideModel(talk){
-  if (!wr || wr.hidden) return;
+  if (!wr || !wr.sup || wr.hidden) return;
   wr.hidden = true; $('#wsvg').classList.add('hide');
   if (talk) tell('hidden');
 }
