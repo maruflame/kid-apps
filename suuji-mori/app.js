@@ -293,13 +293,8 @@ function home(){
   setMode('home');
   const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
     + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
-  const stones = range(1,S.max).map(n => n <= pool().length
-    ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.flags ? '' : S.label[n]}</button>`
-    : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
   stage.innerHTML = `
     <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
-    <div class="path-label">${S.name}の みち</div>
-    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}${S.pitch ? ' notes' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
     <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
       `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
     <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
@@ -1255,7 +1250,6 @@ stage.addEventListener('click', e => {
   if (el.id === 'nreset') return resetNurie(el);
   if (el.dataset.subj){ if (el.dataset.subj !== S.id) { useSubj(el.dataset.subj); tone(784,0,.15,'triangle',.12); } return home(); }
   if (el.dataset.go) return GO[el.dataset.go]();
-  if (el.dataset.learn) return learn(+el.dataset.learn);
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
   if (el.dataset.word){ bounce(el, 1.1); return sayLine(S.id === 'hira' ? 'hword' : 'word', +el.dataset.word); }
   if (el.dataset.ans) return (ADDQ.includes(mode) ? answerAdd : answer)(+el.dataset.ans, el);

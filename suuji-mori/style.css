@@ -124,18 +124,6 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .subj{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;background:var(--paper);padding:6px;border-radius:30px;box-shadow:0 4px 0 var(--shade)}
 .subj button{border:0;border-radius:999px;padding:10px 14px;font-weight:900;font-size:clamp(17px,4.6vw,22px);white-space:nowrap;background:none;color:var(--ink-soft)}
 .subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
-.path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
-.stone{position:relative;width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font:600 27px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
-.stone.locked{background:var(--ground-2);color:var(--ink-soft);box-shadow:none;font-size:20px}
-.stone .crown{position:absolute;top:-14px;font-size:16px}
-/* 1〜30・ABC のように 多いときは 10こずつ ならべる（10のまとまりが 見える） */
-.path.many{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;width:100%;max-width:520px}
-.path.many .stone{width:auto;height:auto;aspect-ratio:1;font-size:clamp(14px,4vw,22px);box-shadow:0 3px 0 var(--shade)}
-.path.many .stone.locked{font-size:clamp(11px,3vw,16px)}
-.path.many .stone .crown{top:-11px;font-size:12px}
-/* たしざん：「2+3」の石は 9こずつ ならべて 文字を 小さめに */
-.path.facts .stone{font-size:clamp(11px,3.2vw,18px);letter-spacing:-.03em}
-.path-label{font-size:15px;font-weight:700;color:var(--ink-soft);letter-spacing:.08em}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:640px}
 .mode{border:0;border-radius:var(--r);padding:16px 8px 14px;background:var(--paper);border-bottom:8px solid var(--c);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:clamp(19px,5vw,24px)}
 .mode:active{transform:translateY(4px);border-bottom-width:4px;margin-top:4px}
@@ -226,7 +214,6 @@ button.tenrow{background:#EFE8FF}
 .cell.hole.filled{border-style:solid;border-color:var(--sun);background:#FFF1C2;animation:pop .35s}
 
 /* けんばん・おとあて：白鍵 8こ、黒鍵は 白鍵の さかいめ（--k 番目の 白鍵の 左はし）に */
-.path.notes .stone{font-size:clamp(17px,4.6vw,22px);letter-spacing:-.04em}
 .kb{position:relative;display:flex;gap:3px;width:100%;max-width:520px;height:clamp(150px,30vh,230px);padding:6px 6px 8px;box-sizing:border-box;background:var(--ink);border-radius:16px}
 .key{border:0;padding:0;font:inherit}
 .key.w{flex:1;min-width:0;background:#fff;border-radius:0 0 10px 10px;box-shadow:inset 0 -6px 0 #DCE3E0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding-bottom:12px;font-weight:900;font-size:clamp(13px,3.8vw,20px);color:var(--ink-soft)}
@@ -399,15 +386,13 @@ button.tenrow{background:#EFE8FF}
 }
 /* スマホ：ホームを1画面におさめる（モードの小さい説明は省く。背の低い iPhone SE などは さらに詰める） */
 @media (max-height:860px){
-  .mode small,.path-label{display:none}
+  .mode small{display:none}
   .mode .ic{font-size:clamp(32px,8.5vw,44px)}
   .stage{gap:12px}
-  .stone{width:48px;height:48px;font-size:25px}
   .mode{padding:10px 8px 8px}
   .mode.wide{padding-block:8px 6px}
 }
 @media (max-height:740px){
-  .stone{width:44px;height:44px;font-size:23px}
   .mode .ic{font-size:34px}
   .mode{padding:6px 8px 4px}
   :root{--kira-h:clamp(140px,26vh,220px)}
