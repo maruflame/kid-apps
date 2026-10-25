@@ -125,8 +125,9 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .ev-btn:active{transform:translateY(5px);box-shadow:0 2px 0 var(--berry-d)}
 
 /* home */
-.subj{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;background:var(--paper);padding:6px;border-radius:30px;box-shadow:0 4px 0 var(--shade)}
-.subj button{border:0;border-radius:999px;padding:10px 14px;font-weight:900;font-size:clamp(17px,4.6vw,22px);white-space:nowrap;background:none;color:var(--ink-soft)}
+.subj{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;max-width:560px;box-sizing:border-box;background:var(--paper);padding:5px;border-radius:24px;box-shadow:0 4px 0 var(--shade);flex:none}
+.subj button{border:0;border-radius:18px;padding:5px 2px 6px;font-weight:900;font-size:clamp(13px,3.5vw,17px);line-height:1.15;white-space:nowrap;background:none;color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;gap:1px}
+.subj .ic{font-size:clamp(20px,5.6vw,26px);line-height:1.1}
 .subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
 .path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
 .stone{position:relative;width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font:600 27px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
@@ -401,21 +402,46 @@ button.tenrow{background:#EFE8FF}
   .bignum{font-size:clamp(80px,20vh,140px)}
   .choice{width:clamp(104px,22vh,150px);font-size:clamp(64px,14vh,98px)}
 }
-/* スマホ：ホームを1画面におさめる（モードの小さい説明は省く。背の低い iPhone SE などは さらに詰める） */
+/* スマホ（iPhone 15 など）：どの きほんの 画面も スクロールなしで 1画面に おさめる。
+   ホーム画面から ひらくと せは 790〜850px、Safari の バーが でていると 660px ほど */
 @media (max-height:860px){
-  .mode small,.path-label{display:none}
-  .mode .ic{font-size:clamp(32px,8.5vw,44px)}
   .stage{gap:12px}
+  /* ホーム：キラを 小さく、モードは 3れつの タイル（えの下に なまえ）、多い 石は 高さに あわせて 小さく */
+  .app[data-mode="home"]{--kira-h:clamp(80px,11vh,120px)}
+  .mode small,.path-label{display:none}
   .stone{width:48px;height:48px;font-size:25px}
-  .mode{padding:10px 8px 8px}
-  .mode.wide{padding-block:8px 6px}
+  .path.many{max-width:min(520px,100%,42vh);gap:4px}
+  .modes{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .mode,.mode.wide,.mode:last-child:nth-child(odd){grid-column:auto;flex-direction:column;justify-content:center;gap:0;padding:4px 2px 2px;border-bottom-width:6px;font-size:clamp(12px,3.4vw,15px);line-height:1.2}
+  .mode:active{border-bottom-width:3px;margin-top:3px}
+  .mode .ic,.mode.wide .ic{font-size:26px}
+  .book-btn{font-size:17px;padding:2px 10px}
+  /* あそびの 画面も キラを すこし 小さくして こたえの ボタンまで 1画面に */
+  :root{--kira-h:clamp(110px,19vh,170px)}
+  .card{padding:10px 16px 14px;gap:6px}
+  .count-card{padding-top:14px}
+  /* みる・きく：大きな字・ボタン・けんばん・やじるしを 高さに あわせて ちぢめる */
+  .bignum{font-size:clamp(72px,13vh,150px)}
+  .bignum.flagbig{width:clamp(110px,20vh,200px)}
+  .play{width:clamp(72px,11vh,120px);font-size:clamp(34px,5.4vh,56px)}
+  .kb{height:clamp(130px,23vh,210px)}
+  .arrow{width:clamp(60px,9vh,84px);height:clamp(60px,9vh,84px)}
+  .park{min-height:220px}
+  /* ぬりえ：絵は のこりの 高さに あわせて ちぢむ（いろと ボタンまで 1画面に） */
+  .nurie-card{flex:1 1 0;min-height:120px;max-height:576px;display:grid;grid-template-rows:minmax(0,1fr);padding:8px}
+  .nurie{height:100%;min-height:0}
+  .palette{gap:8px;max-width:340px}
+  .nreset{padding:8px 16px;min-height:56px;font-size:17px}
 }
 @media (max-height:740px){
   .stone{width:44px;height:44px;font-size:23px}
-  .mode .ic{font-size:34px}
-  .mode{padding:6px 8px 4px}
-  :root{--kira-h:clamp(140px,26vh,220px)}
   .stage{gap:10px}
+}
+@media (max-height:700px){
+  .stage{padding-block:4px 12px}
+  .path.many{max-width:min(520px,100%,33vh)}
+  .bignum{font-size:clamp(64px,11vh,150px)}
+  .kb{height:clamp(120px,20vh,210px)}
 }
 
 /* たんご れんしゅう */

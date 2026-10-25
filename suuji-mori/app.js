@@ -291,8 +291,10 @@ const caughtCount = () => range(1,S.max).filter(n => state.caught[n]).length;
 function home(){
   if (timeUp(kira, kcfg, Date.now())) return goodnight();
   setMode('home');
-  const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
-    + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
+  // 教科は 4こずつ 2だんの タイル（えの下に なまえ）：ホームを スクロールなしで 1画面に おさめる
+  const tab = (t, attr) => { const [ic, ...w] = t.split(' '); return `<button ${attr}><span class="ic">${ic}</span>${w.join(' ')}</button>`; };
+  const tabs = Object.values(SUBJ).map(s => tab(s.tab, `data-subj="${s.id}" aria-pressed="${s === S}"`)).join('')
+    + tab('🎨 ぬりえ', 'data-go="nurie" aria-pressed="false"');
   const stones = range(1,S.max).map(n => n <= pool().length
     ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.flags ? '' : S.label[n]}</button>`
     : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
@@ -645,7 +647,12 @@ function drawTrace(){
   const ang = Math.atan2(p[k+1][1] - p[k-1][1], p[k+1][0] - p[k-1][0]) * 180 / Math.PI;
   arr.setAttribute('transform', `translate(${p[k][0].toFixed(1)} ${p[k][1].toFixed(1)}) rotate(${ang.toFixed(0)})`);
 }
-const svgPt = (svg, e) => { const m = svg.getScreenCTM().inverse(), pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [pt.x, pt.y]; };
+// 指の いちを 手本の 座標に。iPhone の Safari は getScreenCTM が viewBox の よはく（よこ長の わくに たて長の 字を 入れたときの ずれ）を
+// 入れずに かえすことが あり、書いた線が 指から ずれるので、わくの 大きさと viewBox から じぶんで 計算する（preserveAspectRatio は きほんの まんなか あわせ）
+const svgPt = (svg, e) => {
+  const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, k = Math.min(r.width / vb.width, r.height / vb.height);
+  return [vb.x + (e.clientX - r.left - (r.width - vb.width * k) / 2) / k, vb.y + (e.clientY - r.top - (r.height - vb.height * k) / 2) / k];
+};
 function traceDown(svg, e){
   e.preventDefault();
   if (q.over) return;
