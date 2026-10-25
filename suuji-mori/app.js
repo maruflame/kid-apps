@@ -1193,7 +1193,7 @@ function tapWalker(el){
 }
 
 /* ---------- ぬりえ ----------
-   まず おひめさまを えらぶ（小さな絵には いま ぬってある色が出る）。
+   まず 絵（おひめさま・どうぶつ）を えらぶ（小さな絵には いま ぬってある色が出る）。
    いろを えらんで 絵の部分をタップすると、その部分（おなじ なまえの部分ぜんぶ）が その色になる。
    ぬった色は 絵ごとに保存するので、つぎに開いても つづきから。ぜんぶ ぬれたら おいわいして、一覧に もどる。 */
 const NURIEKEY = 'suuji-mori-nurie';
@@ -1232,7 +1232,7 @@ function paint(part){
   picFill()[k] = c; store(NURIEKEY, nu);
   $('#nsvg').querySelectorAll(`[data-part="${k}"]`).forEach(p => p.setAttribute('fill', c));
   popSnd();
-  if (!was && picDone()){ fanfare(); burst($('#nsvg'), 40); tell('nurieDone'); later(() => nurie(pic), 3000); }
+  if (!was && picDone()){ fanfare(); burst($('#nsvg'), 40); tell('nurieDone', pic); later(() => nurie(pic), 3000); }
 }
 function resetNurie(btn){
   if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = '🔄 もういちど おすと けすよ'; return tell('nurieReset'); }
