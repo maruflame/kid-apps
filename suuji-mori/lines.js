@@ -94,10 +94,10 @@ const LINE = {
   hword: line('n', n => [null, HWORD[n][2]], s => s.id === 'hira'),
   tryIt: line('', () => [null, S.tryIt()]),
   // ぬりえ
-  nurieGallery: line('', () => ['どの おひめさまを ぬる？', 'どのお姫様を、塗る？']),
+  nurieGallery: line('', () => ['どの えを ぬる？', 'どの絵を、塗る？']),
   nuriePick: line('pic', id => [`${PICTURES[id].name}！ すきな いろを えらんで、タップしてね`, `${PICTURES[id].say}！ 好きな色を選んで、塗りたいところを、タップしてね`]),
   color: line('color', ([, show, sp]) => [`${show}で ぬろう`, `${sp}で、塗ろう`]),
-  nurieDone: line('', () => ['できた！ すてきな おひめさま！', 'できた！ 素敵な、お姫様！']),
+  nurieDone: line('pic', id => { const [show, sp] = PICTURES[id].done || ['おひめさま', 'お姫様']; return [`できた！ すてきな ${show}！`, `できた！ 素敵な、${sp}！`]; }),
   nurieReset: line('', () => ['もういちど おすと ぜんぶ けすよ', 'もう一度押すと、全部消すよ']),
 };
 

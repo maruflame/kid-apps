@@ -194,3 +194,115 @@ Object.assign(PICTURES, {
   chou:    princess({ name: 'ちょうちょの おひめさま', short: 'ちょうちょ', say: '蝶々のお姫様', hair: 'long', bangs: 'part', head: 'flowers', dress: 'gown', hand: 'wand', bg: 'butterfly', face: 'happy', pet: 'wings' }),
 });
 PICTURES.princess.say = 'お姫様';
+
+/* ---------- かわいい どうぶつ ----------
+   背景は おひめさまと おなじ BGS から えらぶ。parts は 背景の上に 下から順に重ねる。 */
+const EYE = (x, y, r = 8) => `<ellipse cx="${x}" cy="${y}" rx="${r * .85}" ry="${r}" fill="#3B2E3A"/><circle cx="${x + r * .3}" cy="${y - r * .35}" r="${r * .32}" fill="#fff"/>`;
+const BLUSH = (x, y) => `<ellipse cx="${x}" cy="${y}" rx="9" ry="5.5" fill="#FF8FA3" opacity=".55"/>`;
+const INK = (d, w = 3) => `<path d="${d}" stroke="#3B2E3A" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+const leg = (x) => [['body', 'path', `d="M${x} 296 L${x + 22} 296 L${x + 22} 366 L${x} 366Z"`],
+  ['hoof', 'path', `d="M${x - 2} 364 L${x + 24} 364 L${x + 24} 380 C${x + 24} 386 ${x - 2} 386 ${x - 2} 380Z"`]];
+// 1まいの絵：{ name, say, done（できた！ すてきな ○○！ の [ふきだし, 読み上げ]）, bg, parts, deco, dy（どうぶつを 下に ずらす）}
+function animal({ name, say, done, bg, parts, deco, dy = 0 }){
+  const B = BGS[bg], down = dy ? ` transform="translate(0 ${dy})"` : '';
+  return { name, say, done, w: 300, h: 420,
+    parts: [['bg', 'rect', 'x="0" y="0" width="300" height="420"'], ...B.back, ...parts.map(([k, tag, a]) => [k, tag, a + down])],
+    deco: (B.deco || '') + `<g${down}>${deco}</g>` };
+}
+Object.assign(PICTURES, {
+  unicorn: animal({ name: 'ユニコーン', say: 'ユニコーン', done: ['ユニコーン', 'ユニコーン'], bg: 'rainbow', dy: 26,
+    parts: [['tail', 'path', 'd="M226 268 C262 246 290 278 272 312 C290 330 278 370 248 364 C262 342 244 324 254 306 C240 298 234 286 226 282Z"'],
+      ...leg(186), ...leg(210), ...leg(104), ...leg(130),
+      ['body', 'ellipse', 'cx="166" cy="286" rx="72" ry="46"'],
+      ['body', 'path', 'd="M92 214 C96 248 110 280 136 298 L176 264 C154 246 136 222 130 196Z"'],
+      ['body', 'path', 'd="M112 166 L130 128 L136 172Z"'],
+      ['body', 'ellipse', 'cx="98" cy="196" rx="46" ry="42"'],
+      ['muzzle', 'ellipse', 'cx="66" cy="216" rx="30" ry="24"'],
+      ['mane', 'path', 'd="M108 154 C140 146 160 170 156 190 C176 204 180 226 170 238 C190 248 194 266 182 278 L172 268 C158 250 140 226 130 204 C126 184 120 170 108 166Z"'],
+      ['mane', 'path', 'd="M106 160 C86 148 70 160 70 178 C82 168 94 168 104 174Z"'],
+      ['horn', 'path', 'd="M86 162 L94 88 L112 158Z"']],
+    deco: INK('M91 140 L107 136 M89 122 L104 116 M92 104 L101 100', 2.5)
+      + INK('M80 190 Q90 200 100 190') + INK('M82 190 L76 184 M90 194 L88 186 M98 190 L102 184', 2.5)
+      + '<ellipse cx="52" cy="212" rx="3.5" ry="4.5" fill="#3B2E3A"/>' + INK('M54 230 Q64 236 74 230') + BLUSH(104, 214) }),
+  nekochan: animal({ name: 'ねこちゃん', say: '猫ちゃん', done: ['ねこちゃん', '猫ちゃん'], bg: 'hearts',
+    parts: [['body', 'path', 'd="M200 372 C252 368 266 320 250 290 C242 274 254 262 264 270 C280 284 276 340 248 364 C234 378 212 384 196 384Z"'],
+      ['body', 'path', 'd="M110 258 C88 300 84 360 96 392 L204 392 C216 360 212 300 190 258Z"'],
+      ['belly', 'ellipse', 'cx="150" cy="340" rx="34" ry="44"'],
+      ['body', 'ellipse', 'cx="126" cy="390" rx="20" ry="12"'], ['body', 'ellipse', 'cx="174" cy="390" rx="20" ry="12"'],
+      ['body', 'path', 'd="M82 150 L86 72 L140 114Z"'], ['body', 'path', `d="M82 150 L86 72 L140 114Z" ${M}`],
+      ['earin', 'path', 'd="M93 134 L95 92 L124 115Z"'], ['earin', 'path', `d="M93 134 L95 92 L124 115Z" ${M}`],
+      ['body', 'ellipse', 'cx="150" cy="180" rx="78" ry="66"'],
+      ['collar', 'path', 'd="M106 236 C134 252 166 252 194 236 L196 252 C166 268 134 268 104 252Z"'],
+      ['bell', 'circle', 'cx="150" cy="266" r="11"'],
+      ['yarn', 'circle', 'cx="246" cy="384" r="24"']],
+    deco: INK('M150 120 L150 136 M134 124 L137 138 M166 124 L163 138', 3.5) + EYE(120, 180, 10) + EYE(180, 180, 10)
+      + '<path d="M144 198 L156 198 L150 205Z" fill="#E86A7E"/>' + INK('M150 205 L150 210 M138 210 Q144 218 150 210 Q156 218 162 210')
+      + INK('M84 196 L112 200 M86 212 L112 208 M216 196 L188 200 M214 212 L188 208', 2.5) + BLUSH(110, 216) + BLUSH(190, 216)
+      + INK('M226 376 Q246 360 266 380 M228 392 Q248 376 264 396 M236 364 Q250 384 240 404', 2.5) + INK('M146 268 L154 268', 2.5) }),
+  usagi: animal({ name: 'うさぎ', say: 'うさぎ', done: ['うさぎさん', 'うさぎさん'], bg: 'garden',
+    parts: [['fur', 'path', 'd="M110 150 C88 110 92 38 114 28 C138 24 144 100 138 150Z"'], ['fur', 'path', `d="M110 150 C88 110 92 38 114 28 C138 24 144 100 138 150Z" ${M}`],
+      ['earin', 'path', 'd="M114 138 C102 108 104 56 116 44 C130 46 132 104 130 138Z"'], ['earin', 'path', `d="M114 138 C102 108 104 56 116 44 C130 46 132 104 130 138Z" ${M}`],
+      ['fur', 'ellipse', 'cx="150" cy="318" rx="72" ry="66"'],
+      ['belly', 'ellipse', 'cx="150" cy="328" rx="42" ry="46"'],
+      ['fur', 'ellipse', 'cx="110" cy="382" rx="30" ry="15"'], ['fur', 'ellipse', 'cx="190" cy="382" rx="30" ry="15"'],
+      ['fur', 'ellipse', 'cx="150" cy="190" rx="72" ry="60"'],
+      ['leaf', 'path', 'd="M146 258 C134 238 138 226 147 230 C151 240 151 250 150 258Z"'], ['leaf', 'path', 'd="M152 258 C158 238 170 232 174 240 C166 248 160 254 156 260Z"'],
+      ['carrot', 'path', 'd="M136 264 C136 252 164 252 164 264 L154 334 C153 340 147 340 146 334Z"'],
+      ['fur', 'ellipse', 'cx="132" cy="284" rx="15" ry="13"'], ['fur', 'ellipse', 'cx="168" cy="284" rx="15" ry="13"']],
+    deco: EYE(124, 190, 10) + EYE(176, 190, 10) + '<ellipse cx="150" cy="208" rx="6" ry="4.5" fill="#E86A7E"/>'
+      + INK('M150 212 L150 218 M140 222 Q146 228 150 218 Q154 228 160 222') + BLUSH(106, 214) + BLUSH(194, 214)
+      + INK('M144 290 L150 292 M148 308 L154 306', 2.5) }),
+  wanko: animal({ name: 'わんちゃん', say: 'ワンちゃん', done: ['わんちゃん', 'ワンちゃん'], bg: 'butterfly',
+    parts: [['fur', 'path', 'd="M196 330 C232 318 244 286 236 270 C252 280 250 330 206 352Z"'],
+      ['fur', 'path', 'd="M108 262 C88 300 86 360 96 392 L204 392 C214 360 212 300 192 262Z"'],
+      ['belly', 'ellipse', 'cx="150" cy="340" rx="34" ry="44"'],
+      ['fur', 'ellipse', 'cx="126" cy="390" rx="20" ry="12"'], ['fur', 'ellipse', 'cx="174" cy="390" rx="20" ry="12"'],
+      ['fur', 'ellipse', 'cx="150" cy="180" rx="72" ry="62"'],
+      ['spot', 'ellipse', 'cx="176" cy="164" rx="24" ry="22"'],
+      ['muzzle', 'ellipse', 'cx="150" cy="210" rx="36" ry="26"'],
+      ['ear', 'path', 'd="M90 132 C60 130 46 184 58 222 C66 244 90 238 98 214 C104 188 106 148 90 132Z"'], ['ear', 'path', `d="M90 132 C60 130 46 184 58 222 C66 244 90 238 98 214 C104 188 106 148 90 132Z" ${M}`],
+      ['collar', 'path', 'd="M108 238 C134 252 166 252 192 238 L194 254 C166 268 134 268 106 254Z"'],
+      ['tag', 'path', heartPath(150, 270, 11)]],
+    deco: EYE(124, 168, 10) + EYE(176, 168, 10) + '<ellipse cx="150" cy="200" rx="11" ry="8" fill="#3B2E3A"/><ellipse cx="147" cy="197" rx="3.5" ry="2" fill="#fff"/>'
+      + '<path d="M144 218 Q150 236 156 218Z" fill="#FF8FA3" stroke="#3B2E3A" stroke-width="2.5" stroke-linejoin="round"/>'
+      + INK('M150 208 L150 216 M136 214 Q143 222 150 216 Q157 222 164 214') + BLUSH(112, 200) + BLUSH(188, 200) }),
+  kuma: animal({ name: 'くまさん', say: 'くまさん', done: ['くまさん', 'くまさん'], bg: 'stars',
+    parts: [['balloon', 'path', heartPath(244, 76, 30)],
+      ['fur', 'circle', 'cx="90" cy="120" r="28"'], ['fur', 'circle', 'cx="210" cy="120" r="28"'],
+      ['earin', 'circle', 'cx="90" cy="120" r="15"'], ['earin', 'circle', 'cx="210" cy="120" r="15"'],
+      ['fur', 'ellipse', 'cx="150" cy="318" rx="74" ry="70"'],
+      ['belly', 'ellipse', 'cx="150" cy="330" rx="44" ry="48"'],
+      ['fur', 'ellipse', 'cx="106" cy="382" rx="28" ry="20"'], ['fur', 'ellipse', 'cx="194" cy="382" rx="28" ry="20"'],
+      ['pad', 'ellipse', 'cx="106" cy="384" rx="15" ry="11"'], ['pad', 'ellipse', 'cx="194" cy="384" rx="15" ry="11"'],
+      ['fur', 'ellipse', 'cx="88" cy="300" rx="18" ry="30"'], ['fur', 'ellipse', 'cx="214" cy="282" rx="18" ry="28"'],
+      ['fur', 'ellipse', 'cx="150" cy="182" rx="76" ry="66"'],
+      ['muzzle', 'ellipse', 'cx="150" cy="210" rx="32" ry="24"'],
+      ...bowShape('ribbon', 150, 254, 16)],
+    deco: INK('M244 103 C254 160 244 220 220 262', 2.5) + EYE(122, 174, 9) + EYE(178, 174, 9)
+      + '<ellipse cx="150" cy="200" rx="11" ry="8" fill="#3B2E3A"/><ellipse cx="147" cy="197" rx="3.5" ry="2" fill="#fff"/>'
+      + INK('M150 208 L150 216 M140 218 Q150 226 160 218') + BLUSH(104, 198) + BLUSH(196, 198) }),
+  hamu: animal({ name: 'ハムスター', say: 'ハムスター', done: ['ハムスター', 'ハムスター'], bg: 'sweets',
+    parts: [['fur', 'circle', 'cx="94" cy="142" r="22"'], ['fur', 'circle', 'cx="206" cy="142" r="22"'],
+      ['earin', 'circle', 'cx="94" cy="142" r="12"'], ['earin', 'circle', 'cx="206" cy="142" r="12"'],
+      ['feet', 'ellipse', 'cx="116" cy="372" rx="22" ry="11"'], ['feet', 'ellipse', 'cx="184" cy="372" rx="22" ry="11"'],
+      ['fur', 'path', 'd="M150 122 C86 122 60 182 62 250 C64 320 94 368 150 368 C206 368 236 320 238 250 C240 182 214 122 150 122Z"'],
+      ['belly', 'path', 'd="M150 214 C110 214 96 260 100 300 C104 338 124 358 150 358 C176 358 196 338 200 300 C204 260 190 214 150 214Z"'],
+      ['puff', 'ellipse', 'cx="98" cy="218" rx="24" ry="18"'], ['puff', 'ellipse', 'cx="202" cy="218" rx="24" ry="18"'],
+      ['berry', 'path', 'd="M128 268 C128 254 172 254 172 268 C172 294 158 312 150 314 C142 312 128 294 128 268Z"'],
+      ['leaf', 'path', 'd="M134 262 L142 248 L150 258 L158 248 L166 262Z"'],
+      ['fur', 'ellipse', 'cx="126" cy="282" rx="13" ry="11"'], ['fur', 'ellipse', 'cx="174" cy="282" rx="13" ry="11"']],
+    deco: EYE(124, 184, 9) + EYE(176, 184, 9) + '<ellipse cx="150" cy="202" rx="6" ry="4.5" fill="#E86A7E"/>'
+      + INK('M150 206 L150 211 M141 214 Q146 220 150 211 Q154 220 159 214') + BLUSH(98, 218) + BLUSH(202, 218)
+      + [[142, 276], [158, 276], [150, 290], [142, 302], [158, 302]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.8" ry="2.6" fill="#4A3B47"/>`).join('') }),
+  pengin: animal({ name: 'ペンギン', say: 'ペンギン', done: ['ペンギン', 'ペンギン'], bg: 'snow',
+    parts: [['body', 'path', 'd="M70 208 C32 234 16 290 28 322 C46 316 64 292 76 262Z"'], ['body', 'path', `d="M70 208 C32 234 16 290 28 322 C46 316 64 292 76 262Z" ${M}`],
+      ['body', 'ellipse', 'cx="150" cy="250" rx="90" ry="130"'],
+      ['belly', 'path', 'd="M150 132 C112 132 92 162 100 196 C82 230 80 300 98 340 C116 372 184 372 202 340 C220 300 218 230 200 196 C208 162 188 132 150 132Z"'],
+      ['feet', 'ellipse', 'cx="118" cy="384" rx="26" ry="12"'], ['feet', 'ellipse', 'cx="182" cy="384" rx="26" ry="12"'],
+      ['scarf', 'path', 'd="M178 252 L198 318 L176 324 L162 260Z"'],
+      ['scarf', 'path', 'd="M94 234 C128 252 172 252 206 234 L210 254 C172 274 128 274 90 254Z"'],
+      ['beak', 'path', 'd="M136 204 L164 204 L150 222Z"'],
+      ['hat', 'path', 'd="M100 104 C108 52 192 52 200 104Z"'], ['pompom', 'circle', 'cx="150" cy="54" r="15"'],
+      ['band', 'path', 'd="M94 98 C130 90 170 90 206 98 L206 116 C170 108 130 108 94 116Z"']],
+    deco: EYE(126, 184, 10) + EYE(174, 184, 10) + BLUSH(110, 210) + BLUSH(190, 210) + INK('M180 312 L184 324 M188 310 L192 322', 2.5) }),
+});
