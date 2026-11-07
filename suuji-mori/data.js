@@ -280,3 +280,12 @@ const SUBJ = {
 };
 let S = SUBJ.num;
 const V = n => S.v(n);
+/* 画面の 階層：なかま（かず・もじ…）→ 教科 → あそび
+   items は [教科の id（ぬりえは 'nurie'）, アイコン, なまえ, ちいさい 説明]。1つだけの なかまは 教科の画面を とばす */
+const CATS = [
+  { id: 'kazu', ic: '🔢', name: 'かず', c: '#E5484D', items: [['num', '🔢', 'すうじ', '1〜30'], ['add', '➕', 'たしざん', 'こたえ 10まで']] },
+  { id: 'moji', ic: '📝', name: 'もじ', c: '#2E8FD0', items: [['hira', 'あ', 'ひらがな', 'あ〜ん'], ['abc', '🔤', 'ABC', 'A〜Z']] },
+  { id: 'music', ic: '🎵', name: 'おんがく', c: '#7A5AE0', items: [['key', '🎹', 'けんばん', 'ドレミの ばしょ'], ['oto', '👂', 'おとあて', 'なんの おと？'], ['waon', '🚩', 'わおん', 'はたの いろ']] },
+  { id: 'art', ic: '🎨', name: 'おえかき', c: '#F07C2A', items: [['nurie', '🎨', 'ぬりえ', 'すきな いろで']] },
+];
+const catOf = id => CATS.find(c => c.items.some(it => it[0] === id)) || CATS[0];

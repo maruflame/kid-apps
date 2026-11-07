@@ -125,9 +125,11 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .ev-btn:active{transform:translateY(5px);box-shadow:0 2px 0 var(--berry-d)}
 
 /* home */
-.subj{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;background:var(--paper);padding:6px;border-radius:30px;box-shadow:0 4px 0 var(--shade)}
-.subj button{border:0;border-radius:999px;padding:10px 14px;font-weight:900;font-size:clamp(17px,4.6vw,22px);white-space:nowrap;background:none;color:var(--ink-soft)}
-.subj button[aria-pressed="true"]{background:var(--ink);color:#fff}
+/* いま どこに いるか（かず ／ すうじ） */
+.crumb{display:inline-flex;align-items:center;gap:6px;background:var(--paper);padding:8px 18px;border-radius:999px;box-shadow:0 4px 0 var(--shade);font-weight:900;font-size:clamp(17px,4.6vw,22px);color:var(--ink-soft);white-space:nowrap}
+/* いちばん上：かず・もじ・おんがく・おえかき を 大きく 2×2 */
+.modes.cats .mode{padding-block:22px 18px;font-size:clamp(24px,6.4vw,32px)}
+.modes.cats .mode .ic{font-size:clamp(52px,14vw,72px)}
 .path{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:620px}
 .stone{position:relative;width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;font:600 27px/1 var(--f-num);background:var(--c);color:#fff;box-shadow:0 4px 0 var(--shade)}
 .stone.locked{background:var(--ground-2);color:var(--ink-soft);box-shadow:none;font-size:20px}

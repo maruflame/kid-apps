@@ -8,7 +8,7 @@ const MAXPICS = 12;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const $ = s => document.querySelector(s);
-const stage = $('#stage'), bubble = $('#bubble'), homeBtn = $('#homeBtn'), appEl = $('#app');
+const stage = $('#stage'), bubble = $('#bubble'), homeBtn = $('#homeBtn'), backBtn = $('#backBtn'), appEl = $('#app');
 const jarEl = $('#jar'), whoChip = $('#whoChip'), kiraArea = $('#kiraArea'), kiraBtn = $('#kira'), kbubble = $('#kbubble'), evolveEl = $('#evolve');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -276,9 +276,11 @@ function setMode(m){
   if (game) lastGame = m;
   appEl.dataset.mode = game ? 'game' : m;
   appEl.classList.toggle('writing', ['trace', 'write', 'tango'].includes(m));
-  jarEl.hidden = !game && m !== 'home';
-  homeBtn.hidden = ['home', 'who', 'night'].includes(m);
-  whoChip.hidden = m !== 'home' || profiles.length < 2;
+  jarEl.hidden = !game && !['top', 'cat', 'home'].includes(m);
+  // 🏠 は いちばん上へ、⬅️ は 1つ上の 階層へ
+  homeBtn.hidden = ['top', 'cat', 'who', 'night'].includes(m) || (m === 'nurie' && !nuOpen && catOf('nurie').items.length < 2);
+  backBtn.hidden = ['top', 'who', 'night'].includes(m);
+  whoChip.hidden = m !== 'top' || profiles.length < 2;
   whoChip.innerHTML = `<span style="--c:${me.color}">${esc([...me.name][0] || '?')}</span>${esc(me.name)}`;
   // あげていない星は へらさない：画面が かわるときは そのまま キラへ
   gifts.slice().forEach(g => receive(g));
@@ -288,30 +290,63 @@ function setMode(m){
 }
 const caughtCount = () => range(1,S.max).filter(n => state.caught[n]).length;
 
-function home(){
+/* ---------- 階層：いちばん上（かず・もじ・おんがく・おえかき）→ なかまの 教科 → 教科の ホーム ---------- */
+const catCard = (attr, c, ic, t, sm) => `<button class="mode" ${attr} style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`;
+function top(){
   if (timeUp(kira, kcfg, Date.now())) return goodnight();
-  setMode('home');
-  const tabs = Object.values(SUBJ).map(s => `<button data-subj="${s.id}" aria-pressed="${s === S}">${s.tab}</button>`).join('')
-    + '<button data-go="nurie" aria-pressed="false">🎨 ぬりえ</button>';
-  const stones = range(1,S.max).map(n => n <= pool().length
-    ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.flags ? '' : S.label[n]}</button>`
-    : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
-  stage.innerHTML = `
-    <div class="subj" role="group" aria-label="なにを まなぶ？">${tabs}</div>
-    <div class="path-label">${S.name}の みち</div>
-    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}${S.pitch ? ' notes' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
-    <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
-      `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
-    <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
-      <button class="book-btn" data-go="hiroba">🌳 なかまの ひろば</button></div>`;
+  setMode('top');
+  stage.innerHTML = `<div class="modes cats" role="group" aria-label="なにを まなぶ？">${CATS.map(c =>
+    catCard(`data-cat="${c.id}"`, c.c, c.ic, c.name, c.items.map(it => it[2]).join('・'))).join('')}</div>`;
   if (!greetNext) return tell('home');
-  // えらんだ あとの はじめの ホーム：ひさしぶりでも「おかえり！」と よろこぶだけ
+  // えらんだ あとの はじめの 画面：ひさしぶりでも「おかえり！」と よろこぶだけ
   greetNext = false;
   const g = greeting(kira, Date.now());
   kira.lastPlayedAt = Date.now(); saveKira();
   kiraFace('happy'); kiraSays(g === 'okaeri' ? 'おかえり！' : 'あそぼう！');
   later(() => kiraFace('normal'), 2500);
   guide(LINE.home()[0], LINE[g === 'okaeri' ? 'okaeri' : 'hello']()[1] + ' ' + LINE.home()[1]);
+}
+let curCat = catOf(opt.subj);
+function cat(id){
+  if (timeUp(kira, kcfg, Date.now())) return goodnight();
+  curCat = CATS.find(c => c.id === id) || curCat;
+  if (curCat.items.length < 2) return openItem(curCat.items[0][0]);
+  setMode('cat');
+  stage.innerHTML = `<div class="crumb">${curCat.ic} ${curCat.name}</div>
+    <div class="modes cats" role="group" aria-label="${curCat.name}">${curCat.items.map(([id, ic, t, sm]) =>
+      catCard(`data-subj="${id}"`, curCat.c, ic, t, sm)).join('')}</div>`;
+  tell('cat');
+}
+function openItem(id){
+  if (id === 'nurie') return nurie();
+  if (id !== S.id) useSubj(id);
+  home();
+}
+// ⬅️：1つ上の 階層へ
+function up(){
+  if (mode === 'cat') return top();
+  if (mode === 'nurie') return nuOpen ? nurie() : catOf('nurie').items.length < 2 ? top() : cat(catOf('nurie').id);
+  if (mode === 'home') return catOf(S.id).items.length < 2 ? top() : cat(catOf(S.id).id);
+  home();
+}
+
+function home(){
+  if (timeUp(kira, kcfg, Date.now())) return goodnight();
+  setMode('home');
+  curCat = catOf(S.id);
+  const it = curCat.items.find(x => x[0] === S.id);
+  const stones = range(1,S.max).map(n => n <= pool().length
+    ? `<button class="stone" data-learn="${n}" style="--c:${S.color[n]}" aria-label="${S.yomi[n]}">${state.lv[n]>=3?'<span class="crown">👑</span>':''}${S.flags ? '' : S.label[n]}</button>`
+    : `<span class="stone locked" aria-hidden="true">🌱</span>`).join('');
+  stage.innerHTML = `
+    <div class="crumb">${curCat.ic} ${curCat.name} ／ ${it[1]} ${it[2]}</div>
+    <div class="path-label">${S.name}の みち</div>
+    <div class="path${S.max > 13 ? ' many' : ''}${S.cols ? ' facts' : ''}${S.pitch ? ' notes' : ''}"${S.cols ? ` style="grid-template-columns:repeat(${S.cols},minmax(0,1fr))"` : ''}>${stones}</div>
+    <div class="modes">${S.modes.map(([go, c, ic, t, sm], i, all) =>
+      `<button class="mode${all.length <= 3 || (all.length % 2 && i === all.length-1) ? ' wide' : ''}" data-go="${go}" style="--c:${c}"><span class="ic">${ic}</span>${t}<small>${sm}</small></button>`).join('')}</div>
+    <div class="row"><button class="book-btn" data-go="book">📖 ずかん <b>${caughtCount()} / ${S.max}</b></button>
+      <button class="book-btn" data-go="hiroba">🌳 なかまの ひろば</button></div>`;
+  tell('home');
 }
 
 function learn(n){ setMode('learn'); cur = n || pendingNew || pool().length; pendingNew = null; renderLearn(); }
@@ -1198,7 +1233,7 @@ function tapWalker(el){
    ぬった色は 絵ごとに保存するので、つぎに開いても つづきから。ぜんぶ ぬれたら おいわいして、一覧に もどる。 */
 const NURIEKEY = 'suuji-mori-nurie';
 const nu = load(NURIEKEY, v => typeof v === 'object') || {};  // { princess: { hair: '#FFD84D', ... }, hana: {...} }
-let pen = 0, pic = 'princess';  // えらんでいる PALETTE の番号 と 絵
+let pen = 0, pic = 'princess', nuOpen = false;  // えらんでいる PALETTE の番号 と 絵
 const picFill = (id = pic) => nu[id] = nu[id] || {};
 const picDone = (id = pic) => PICTURES[id].parts.every(([k]) => picFill(id)[k]);
 const picSVG = (id, attrs, parts) => { const P = PICTURES[id], fill = picFill(id);
@@ -1206,14 +1241,14 @@ const picSVG = (id, attrs, parts) => { const P = PICTURES[id], fill = picFill(id
     <g class="deco">${P.deco}</g></svg>`; };
 // done：いま ぬりおわった絵（一覧で ぴょんと はねさせる）
 function nurie(done){
-  setMode('nurie');
+  nuOpen = false; setMode('nurie');
   stage.innerHTML = `<div class="gallery">${Object.entries(PICTURES).map(([id, P]) =>
     `<button class="thumb" data-draw="${id}">${picSVG(id, 'class="nurie-mini" aria-hidden="true"')}<span>${picDone(id) ? '⭐ ' : ''}${P.short || P.name}</span></button>`).join('')}</div>`;
   if (done){ const t = stage.querySelector(`[data-draw="${done}"]`); t.scrollIntoView({ block: 'nearest' }); bounce(t, 1.12); sparkle(); }
   else tell('nurieGallery');
 }
 function openPic(id){
-  pic = id; setMode('nurie');
+  pic = id; nuOpen = true; setMode('nurie');
   stage.innerHTML = `
     <div class="nurie-card">${picSVG(id, `class="nurie" id="nsvg" role="img" aria-label="${PICTURES[id].name}の ぬりえ"`, true)}</div>
     <div class="palette" role="group" aria-label="いろ">${PALETTE.map(([c, nm], i) =>
@@ -1239,7 +1274,7 @@ function resetNurie(btn){
   nu[pic] = {}; store(NURIEKEY, nu); boop(); openPic(pic);
 }
 
-const GO = { home, who, learn: () => learn(), balloon, trace, write, tango, book, hiroba, nurie };
+const GO = { top, home, who, learn: () => learn(), balloon, trace, write, tango, book, hiroba, nurie };
 QUIZ.forEach(k => GO[k] = () => startQuiz(k));
 ADDQ.forEach(k => GO[k] = () => startAdd(k));
 // じかんが おわっていたら あそびは はじめず おやすみ
@@ -1253,7 +1288,8 @@ stage.addEventListener('click', e => {
   if (el.dataset.play){ bounce(el, 1.08); return playN(el.dataset.play === 'q' ? q.t : cur); }
   if (el.dataset.draw){ tone(784, 0, .15, 'triangle', .12); return openPic(el.dataset.draw); }
   if (el.id === 'nreset') return resetNurie(el);
-  if (el.dataset.subj){ if (el.dataset.subj !== S.id) { useSubj(el.dataset.subj); tone(784,0,.15,'triangle',.12); } return home(); }
+  if (el.dataset.cat){ tone(784,0,.15,'triangle',.12); bounce(el, 1.05); return cat(el.dataset.cat); }
+  if (el.dataset.subj){ tone(784,0,.15,'triangle',.12); return openItem(el.dataset.subj); }
   if (el.dataset.go) return GO[el.dataset.go]();
   if (el.dataset.learn) return learn(+el.dataset.learn);
   if (el.dataset.step){ cur = Math.max(1, Math.min(S.max, cur + +el.dataset.step)); return renderLearn(); }
@@ -1263,7 +1299,7 @@ stage.addEventListener('click', e => {
   if (el.dataset.tango) return startTango(+el.dataset.tango);
   if (el.classList.contains('item') || el.classList.contains('tenrow') || el.classList.contains('hole')) return countTap(el);
   if (el.dataset.v){ const v = +el.dataset.v; return tapSay(el, LINE.num(v)[1], v); }
-  if (el.dataset.who){ useProfile(el.dataset.who); tone(784,0,.15,'triangle',.12); greetNext = true; return home(); }
+  if (el.dataset.who){ useProfile(el.dataset.who); tone(784,0,.15,'triangle',.12); greetNext = true; return top(); }
   if (el.dataset.hi) return tapWalker(el);
   if (el.dataset.mon){
     const n = +el.dataset.mon;
@@ -1291,7 +1327,8 @@ stage.addEventListener('pointermove', e => {
   if (tr) tr.on = false;
   if (WRITES.includes(mode) && wr && wr.cur) writeUp();
 }));
-homeBtn.addEventListener('click', home);
+homeBtn.addEventListener('click', top);
+backBtn.addEventListener('click', up);
 whoChip.addEventListener('click', who);
 $('#hearBtn').addEventListener('click', e => { bounce(e.currentTarget, 1.1); say(lastSpoken); });
 
@@ -1309,7 +1346,7 @@ function openSheet(){
   sheetIn.innerHTML = `
     <h2 id="sheetTitle">おうちのかたへ</h2>
     ${kiraSheet()}
-    <p class="legend">ホーム画面の上で「すうじ」「ABC」「ひらがな」「たしざん」「けんばん」「おとあて」「わおん」を切りかえられます。記録と仲間はプロフィールごと・教科ごとに別に残ります。以下は いま あそんでいる「${esc(me.name)}」の「${S.name}」についてです。</p>
+    <p class="legend">はじめの画面で「かず（すうじ・たしざん）」「もじ（ひらがな・ABC）」「おんがく（けんばん・おとあて・わおん）」「おえかき（ぬりえ）」を選び、そのあと教科、あそびの順に進みます（⬅️ で1つもどる、🏠 で はじめの画面）。記録と仲間はプロフィールごと・教科ごとに別に残ります。以下は いま あそんでいる「${esc(me.name)}」の「${S.name}」についてです。</p>
     <h3>しくみ</h3>
     <ul>${S.notes.map(t => `<li>${t}</li>`).join('')}</ul>
     <h3>いまの ようす（なれ度 0〜3）</h3>
@@ -1349,7 +1386,7 @@ function closeSheet(){
   sheet.hidden = true;
   drawKira(); drawJar();
   // 時間を のばしたら おやすみから もどれる／ちぢめたら ホームで おやすみ
-  if (mode === 'home' || mode === 'night') home(); else if (mode === 'book') book(); else if (mode === 'who') who();
+  if (mode === 'top' || mode === 'night') top(); else if (mode === 'cat') cat(curCat.id); else if (mode === 'home') home(); else if (mode === 'book') book(); else if (mode === 'who') who();
 }
 /* キラ と プロフィール：キラの段階・星の数は ここでだけ 見せる（子どもの画面には 出さない・くらべない） */
 function kiraSheet(){
@@ -1447,5 +1484,5 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hid
 useSubj(opt.subj);
 drawKira(); drawJar();
 greetNext = true;
-profiles.length > 1 ? who() : home();
+profiles.length > 1 ? who() : top();
 })();
