@@ -22,17 +22,20 @@
 }
 [hidden]{display:none !important}
 html,body{height:100%}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0}
 body{
   background:var(--ground);color:var(--ink);font-family:var(--f-ja);
-  overflow:hidden;-webkit-user-select:none;user-select:none;
+  overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;
   background-image:radial-gradient(circle at 12% 108%,var(--ground-2) 0 22%,transparent 22.2%),
                    radial-gradient(circle at 92% 112%,var(--ground-2) 0 26%,transparent 26.2%);
 }
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
-.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding-inline:16px;max-width:920px;margin-inline:auto}
+/* iPhone：ダイナミックアイランド・ホームバー・横向きの はし に かからないように（viewport-fit=cover と セット） */
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;max-width:920px;margin-inline:auto;
+  padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px,env(safe-area-inset-left))}
 
 /* top bar */
 .bar{display:flex;align-items:center;gap:12px;padding-block:12px 4px;min-height:60px}
@@ -113,7 +116,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 .app.sleeping .kira{animation:breathe 3.6s ease-in-out infinite}
 
 /* へんしん：光の放射（12本）＋パステルの星、まんなかに 新しい キラ */
-.evolve{position:fixed;inset:0;z-index:30;background:var(--ground);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,3vh,24px);padding:24px 16px;box-sizing:border-box;overflow:hidden}
+.evolve{position:fixed;inset:0;z-index:30;background:var(--ground);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,3vh,24px);padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));box-sizing:border-box;overflow:hidden}
 .ev-rays{position:absolute;left:50%;top:44%;width:180vmax;aspect-ratio:1;translate:-50% -50%;background:repeating-conic-gradient(rgba(255,209,92,.32) 0 15deg,transparent 15deg 30deg);animation:spin 30s linear infinite}
 .ev-stars span{position:absolute;left:var(--x);top:var(--y);color:var(--c);font-size:26px;animation:twinkle 1.8s ease-in-out infinite;animation-delay:var(--d)}
 .ev-title{position:relative;margin:0;font-size:56px;font-weight:900;color:var(--leaf);letter-spacing:.06em;text-shadow:0 4px 0 #fff}
@@ -336,8 +339,8 @@ button.tenrow{background:#EFE8FF}
 .walker.walking .wbody{animation:waddle .5s ease-in-out infinite}
 
 /* parents sheet */
-.sheet{position:fixed;inset:0;background:rgba(58,46,110,.45);display:grid;place-items:center;padding:16px;z-index:40;-webkit-user-select:text;user-select:text}
-.sheet-in{background:var(--paper);border-radius:24px;padding:22px 22px 18px;width:100%;max-width:560px;max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.7}
+.sheet{position:fixed;inset:0;background:rgba(58,46,110,.45);display:grid;place-items:center;box-sizing:border-box;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));z-index:40;-webkit-user-select:text;user-select:text}
+.sheet-in{background:var(--paper);border-radius:24px;padding:22px 22px 18px;width:100%;max-width:560px;max-height:calc(100% - 32px);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.7}
 .sheet h2{margin:0;font-size:21px;font-weight:900;text-wrap:balance}
 .sheet h3{margin:0;font-size:13px;letter-spacing:.12em;color:var(--ink-soft)}
 .sheet ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}

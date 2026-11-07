@@ -1334,6 +1334,10 @@ function openSheet(){
     </div>
     <p class="legend">名前に「Natural」「拡張」「プレミアム」「Enhanced」とつく声ほど自然です（おまかせ だと自動でえらびます）。どれも無料：パソコンは Microsoft Edge で開くと「Nanami Online (Natural)」が使えます。iPhone・iPad・Mac は 設定 →アクセシビリティ →読み上げコンテンツ →声 →日本語 から「Kyoko（拡張）」などを追加できます。${CLIPS.size ? 'ずんだもんの声で読むときも、英語と おうちの画像の名前は ここで選んだ声で読みます。' : ''}</p>
     ${VOICE.credit ? `<p class="legend">音声：${esc(VOICE.credit)}</p>` : ''}
+    ${canKeepVoice() ? `<h3>オフライン</h3>
+    <p class="legend">ホーム画面に追加すると アプリのように 全画面で ひらけます（Safari の 共有ボタン →「ホーム画面に追加」）。一度 ひらいた 画面と 声は この端末に 保存され、電波が なくても あそべます。まだ 鳴らしていない 声も まとめて 保存できます（Wi-Fi 推奨）。</p>
+    <button class="sbtn add" id="keepVoice">📥 声を ぜんぶ 保存する（約${Math.round(VOICE.ids.length * 15 / 1024)}MB）</button>
+    <div class="legend" id="keepMsg" role="status"></div>` : ''}
     <div class="sheet-actions">
       <button class="sbtn danger" id="reset">${esc(me.name)}の「${S.name}」の記録をリセット</button>
       <button class="sbtn primary" id="closeSheet">とじる</button>
@@ -1345,6 +1349,32 @@ const voiceOpts = (vs, cur) => `<option value="">おまかせ</option>` + vs
   .sort((a,b) => isNat(b) - isNat(a) || a.name.localeCompare(b.name))
   .map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${isNat(v) ? '★ ' : ''}${esc(v.name)}</option>`).join('');
 const trySay = () => sayLine('tryIt');
+/* 声を まとめて 保存（sw.js と おなじ 入れもの。Service Worker が 動いているときだけ） */
+const VOICE_CACHE = 'meridian-voice';
+const canKeepVoice = () => CLIPS.size > 0 && 'caches' in window && !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+let keeping = false;
+async function keepVoice(btn){
+  if (keeping) return;
+  keeping = true; btn.disabled = true;
+  const msg = t => { const m = $('#keepMsg'); if (m) m.textContent = t; };
+  try {
+    const cache = await caches.open(VOICE_CACHE);
+    const have = new Set((await cache.keys()).map(r => r.url));
+    const todo = VOICE.ids.map(id => new URL(`voice/${id}.m4a`, location.href).href).filter(u => !have.has(u));
+    let done = VOICE.ids.length - todo.length, failed = 0;
+    msg(`${done} / ${VOICE.ids.length}`);
+    // 6本ずつ ならべて とる
+    const work = async () => { for (let u; (u = todo.shift()); ){
+      try { const res = await fetch(u, { cache: 'no-cache' }); if (!res.ok) throw 0; await cache.put(u, res); done++; } catch(e) { failed++; }
+      msg(`${done} / ${VOICE.ids.length}`);
+    } };
+    await Promise.all(Array.from({ length: 6 }, work));
+    msg(failed ? `${failed}こ 保存できませんでした。電波の よい ところで もう一度 おしてください。` : 'ぜんぶ 保存しました。電波が なくても 声が でます。');
+  } catch(e) {
+    msg('保存できませんでした（端末の 空きが すくない かもしれません）。');
+  }
+  keeping = false; btn.disabled = false;
+}
 function closeSheet(){
   sheet.hidden = true;
   drawKira(); drawJar();
@@ -1422,6 +1452,7 @@ sheet.addEventListener('click', e => {
   }
   if (e.target.dataset.del){ pics = pics.filter(p => p.id !== e.target.dataset.del); savePics(); picMsg = '消しました。'; return openSheet(); }
   if (e.target.id === 'tryVoice') return trySay();
+  if (e.target.id === 'keepVoice') return keepVoice(e.target);
   if (e.target.id === 'reset'){
     if (e.target.dataset.armed){ state = fresh(); save(); sheet.hidden = true; home(); }
     else { e.target.dataset.armed = '1'; e.target.textContent = 'もう一度おすと消えます（画像は残ります）'; }
